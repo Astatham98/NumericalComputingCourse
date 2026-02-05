@@ -1,14 +1,21 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+"""
+Mandelbrot Set Generator
+Author : Alex Statham
+Course : Numerical Scientific Computing 2026
+"""
 
-def main(max_iters: int = 100, x_set: list = [-2, 1], y_set: list = [-1.5, 1.5], win_size: int = 100) -> np.ndarray:
+def main(max_iters: int = 100, x_set: list = [-2, 1], y_set: list = [-1.5, 1.5], win_size: int = 100) -> np.ndarraygit :
     """Generate and plot the Mandelbrot set.
     Args: 
         max_iter (int): Maximum number of iterations.
         x_set (list): X-axis range.
         y_set (list): Y-axis range.
         win_size (int): Number of points in each axis.
+    Returns:
+        np.ndarray: Mandelbrot set values in a 2D array.
     """
     x_set, y_set = [-2, 1], [-1.5, 1.5]
     width = np.linspace(x_set[0], x_set[1], win_size)
