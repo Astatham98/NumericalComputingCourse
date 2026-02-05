@@ -16,8 +16,8 @@ def main(max_iters: int = 100,
     """Generate and plot the Mandelbrot set.
     Args: 
         max_iter (int): Maximum number of iterations.
-        x_set (list): X-axis range.
-        y_set (list): Y-axis range.
+        x_set (tuple): X-axis range.
+        y_set (tuple): Y-axis range.
         win_size (int): Number of points in each axis.
     Returns:
         np.ndarray: Mandelbrot set values in a 2D array.
