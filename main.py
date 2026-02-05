@@ -1,13 +1,18 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+from numba import jit
+
 """
 Mandelbrot Set Generator
 Author : Alex Statham
 Course : Numerical Scientific Computing 2026
 """
-
-def main(max_iters: int = 100, x_set: list = [-2, 1], y_set: list = [-1.5, 1.5], win_size: int = 100) -> np.ndarraygit :
+@jit(nopython=True)
+def main(max_iters: int = 100, 
+         x_set: tuple = (-2.0, 1.0),    # Changed to tuple + floats
+         y_set: tuple = (-1.5, 1.5),    # Changed to tuple + floats
+         win_size: int = 100) -> np.ndarray :
     """Generate and plot the Mandelbrot set.
     Args: 
         max_iter (int): Maximum number of iterations.
@@ -17,7 +22,7 @@ def main(max_iters: int = 100, x_set: list = [-2, 1], y_set: list = [-1.5, 1.5],
     Returns:
         np.ndarray: Mandelbrot set values in a 2D array.
     """
-    x_set, y_set = [-2, 1], [-1.5, 1.5]
+
     width = np.linspace(x_set[0], x_set[1], win_size)
     height = np.linspace(y_set[0], y_set[1], win_size)
     points = []
@@ -27,7 +32,7 @@ def main(max_iters: int = 100, x_set: list = [-2, 1], y_set: list = [-1.5, 1.5],
     points = np.array(points)
     
     # Based on the 100x100 points, compute the mandelbrot set
-    mandelbrot_set = np.zeros(points.shape, dtype=int)
+    mandelbrot_set = np.zeros(points.shape)
     # Get n and c
     for i, c in enumerate(points):
         z = 0
