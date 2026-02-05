@@ -25,11 +25,7 @@ def main(max_iters: int = 100,
 
     width = np.linspace(x_set[0], x_set[1], win_size)
     height = np.linspace(y_set[0], y_set[1], win_size)
-    points = []
-    for w in width:
-        for h in height:
-            points.append(w + h*1j)
-    points = np.array(points)
+    points = np.array([complex(x, y) for x in width for y in height])
     
     # Based on the 100x100 points, compute the mandelbrot set
     mandelbrot_set = np.zeros(points.shape)
