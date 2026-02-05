@@ -9,6 +9,15 @@ Author : Alex Statham
 Course : Numerical Scientific Computing 2026
 """
 @jit(nopython=True)
+def f(c: complex, max_iters: int) -> int:
+    z = 0
+    for j in range(max_iters):
+        z = z**2 + c
+        # Break if |Z| > 2
+        if abs(z) > 2:
+            return j
+    return max_iters
+
 def main(max_iters: int = 100, 
          x_set: tuple = (-2.0, 1.0),    # Changed to tuple + floats
          y_set: tuple = (-1.5, 1.5),    # Changed to tuple + floats
@@ -25,23 +34,15 @@ def main(max_iters: int = 100,
 
     width = np.linspace(x_set[0], x_set[1], win_size)
     height = np.linspace(y_set[0], y_set[1], win_size)
-    points = np.array([complex(x, y) for x in width for y in height])
+    points = [complex(x, y) for x in width for y in height]
     
     # Based on the 100x100 points, compute the mandelbrot set
-    mandelbrot_set = np.zeros(points.shape)
+    mandelbrot_set = np.zeros(len(points))
     # Get n and c
     for i, c in enumerate(points):
-        z = 0
-        for j in range(max_iters):
-            z = z**2 + c
-            # Break if |Z| > 2
-            if abs(z) > 2:
-                mandelbrot_set[i] = j
-                break
-        else:
-            mandelbrot_set[i] = max_iters
+        mandelbrot_set[i] = f(c, max_iters)
             
-            
+    
     # Reshape to 2D and plot        
     mandelbrot_set = np.reshape(mandelbrot_set, (len(width), len(height))).T
     return mandelbrot_set
