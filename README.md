@@ -9,5 +9,11 @@ Median execution time over 3 runs: 0.713609 seconds
 
 ## Week 2: Numpy vectorized
 Median execution time over 3 runs: 1.220439 seconds
-Row Major - Execution took: 0.132679 seconds
-Column Major -  Execution took: 0.057834 seconds
+
+Using C order:
+Execution took: 0.004628 seconds
+Execution took: 0.007293 seconds
+
+Using Fortran order:
+Execution took: 0.007324 seconds
+Execution took: 0.005467 seconds

@@ -159,11 +159,11 @@ def w2_memory_access(N=1000):
 
     @timing
     def row_major_sum(A):
-        np.sum(A, axis=1)
+        for i in range(N): s = np.sum(A[i, :])
 
     @timing
     def column_major_sum(A):
-        np.sum(A, axis=0)
+        for j in range(N): s = np.sum(A[:, j])
 
     print("Using C order:")
     row_major_sum(A)
@@ -204,9 +204,11 @@ def benchmark_all(n_runs=3):
 if __name__ == "__main__":
     #seahorse = w_1_5_main(max_iters=500, x_set=(-0.8, -0.7), y_set=(0.05, 0.15), win_size=1024)
     #elephant = w_1_5_main(max_iters=500, x_set=(0.175, 0.375), y_set=(-0.1, 0.1), win_size=1024)
-    deep_seahorse = w_1_5_main(max_iters=2000, x_set=(-0.7487667139, -0.7487667078), y_set=(0.1236408449, 0.1236408510), win_size=1024)
+    #deep_seahorse = w_1_5_main(max_iters=2000, x_set=(-0.7487667139, -0.7487667078), y_set=(0.1236408449, 0.1236408510), win_size=1024)
     #  mandelbrot_set= w_1_5_main(win_size=1024)
-    plt.imshow(deep_seahorse, cmap='twilight_shifted_r')
-    plt.colorbar()
-    plt.show()
+    # plt.imshow(deep_seahorse, cmap='twilight_shifted_r')
+    # plt.colorbar()
+    # plt.show()
+
+    w2_memory_access()
     
