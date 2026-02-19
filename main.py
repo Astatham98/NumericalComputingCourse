@@ -8,15 +8,12 @@ Mandelbrot Set Generator
 Author : Alex Statham
 Course : Numerical Scientific Computing 2026
 """
-@jit(nopython=True)
-def f(c: complex, max_iters: int) -> int:
-    z = 0
-    for j in range(max_iters):
-        z = z**2 + c
-        # Break if |Z| > 2
-        if abs(z) > 2:
-            return j
-    return max_iters
+def f(C: np.ndarray[complex], Z: np.ndarray, M: np.ndarray, max_iters: int) -> np.ndarray:
+    for _ in range(max_iters):
+        mask = np.abs(Z) <= 2
+        Z[mask] = Z[mask]**2 + C[mask]
+        M[mask] += 1
+    return M
 
 def main(max_iters: int = 100, 
          x_set: tuple = (-2.0, 1.0),    # Changed to tuple + floats
@@ -34,17 +31,18 @@ def main(max_iters: int = 100,
 
     width = np.linspace(x_set[0], x_set[1], win_size)
     height = np.linspace(y_set[0], y_set[1], win_size)
-    points = [complex(x, y) for x in width for y in height]
+    X, Y = np.meshgrid(width, height)
+    C = X + 1j * Y
+
+    #points = [complex(x, y) for x in width for y in height]
     
     # Based on the 100x100 points, compute the mandelbrot set
-    mandelbrot_set = np.zeros(len(points))
+    mandelbrot_set = np.zeros(C.shape, dtype=C.dtype)
     # Get n and c
-    for i, c in enumerate(points):
-        mandelbrot_set[i] = f(c, max_iters)
-            
-    
-    # Reshape to 2D and plot        
-    mandelbrot_set = np.reshape(mandelbrot_set, (len(width), len(height))).T
+
+    Z = np.zeros_like(C, dtype=complex)
+    M = np.zeros_like(C, dtype=int)  
+    mandelbrot_set = f(C, Z, M, max_iters)
     return mandelbrot_set
     
 
