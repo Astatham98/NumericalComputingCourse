@@ -33,7 +33,6 @@ def benchmark(func, *args, n_runs=3):
     return median, result
 
 @timing
-@profile
 def w1_main(max_iters: int = 100, 
         x_set: tuple = (-2.0, 1.0),    # Changed to tuple + floats
         y_set: tuple = (-1.5, 1.5),    # Changed to tuple + floats
@@ -74,7 +73,6 @@ def w1_main(max_iters: int = 100,
     return mandelbrot_set
 
 @timing
-@profile
 def w2_main(max_iters: int = 100, 
         x_set: tuple = (-2.0, 1.0),    # Changed to tuple + floats
         y_set: tuple = (-1.5, 1.5),    # Changed to tuple + floats
@@ -125,7 +123,6 @@ def f_jit(c: complex, max_iters: int) -> int:
     return max_iters
 
 @timing
-@profile
 def w_1_5_main(max_iters: int = 100, 
          x_set: tuple = (-2.0, 1.0),    # Changed to tuple + floats
          y_set: tuple = (-1.5, 1.5),    # Changed to tuple + floats
@@ -205,9 +202,11 @@ def benchmark_all(n_runs=3):
         print(f"Max difference: {np.max(diff)}")
 
 if __name__ == "__main__":
-    w2_main(win_size=1024)
-    # mandelbrot_set= w_1_5_main(win_size=1024)
-    # plt.imshow(mandelbrot_set, cmap='twilight_shifted_r')
-    # plt.colorbar()
-    # plt.show()
+    #seahorse = w_1_5_main(max_iters=500, x_set=(-0.8, -0.7), y_set=(0.05, 0.15), win_size=1024)
+    #elephant = w_1_5_main(max_iters=500, x_set=(0.175, 0.375), y_set=(-0.1, 0.1), win_size=1024)
+    deep_seahorse = w_1_5_main(max_iters=2000, x_set=(-0.7487667139, -0.7487667078), y_set=(0.1236408449, 0.1236408510), win_size=1024)
+    #  mandelbrot_set= w_1_5_main(win_size=1024)
+    plt.imshow(deep_seahorse, cmap='twilight_shifted_r')
+    plt.colorbar()
+    plt.show()
     
