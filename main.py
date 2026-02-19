@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 from numba import jit
+from memory_profiler import profile
+
 
 """
 Mandelbrot Set Generator
@@ -31,6 +33,7 @@ def benchmark(func, *args, n_runs=3):
     return median, result
 
 @timing
+@profile
 def w1_main(max_iters: int = 100, 
         x_set: tuple = (-2.0, 1.0),    # Changed to tuple + floats
         y_set: tuple = (-1.5, 1.5),    # Changed to tuple + floats
@@ -71,6 +74,7 @@ def w1_main(max_iters: int = 100,
     return mandelbrot_set
 
 @timing
+@profile
 def w2_main(max_iters: int = 100, 
         x_set: tuple = (-2.0, 1.0),    # Changed to tuple + floats
         y_set: tuple = (-1.5, 1.5),    # Changed to tuple + floats
@@ -95,14 +99,10 @@ def w2_main(max_iters: int = 100,
             M[mask] += 1
         return M
 
-
-
     width = np.linspace(x_set[0], x_set[1], win_size)
     height = np.linspace(y_set[0], y_set[1], win_size)
     X, Y = np.meshgrid(width, height)
     C = X + 1j * Y
-
-    #points = [complex(x, y) for x in width for y in height]
     
     # Based on the 100x100 points, compute the mandelbrot set
     mandelbrot_set = np.zeros(C.shape, dtype=C.dtype)
@@ -125,6 +125,7 @@ def f_jit(c: complex, max_iters: int) -> int:
     return max_iters
 
 @timing
+@profile
 def w_1_5_main(max_iters: int = 100, 
          x_set: tuple = (-2.0, 1.0),    # Changed to tuple + floats
          y_set: tuple = (-1.5, 1.5),    # Changed to tuple + floats
@@ -155,19 +156,58 @@ def w_1_5_main(max_iters: int = 100,
     return mandelbrot_set
     
     
+def w2_memory_access(N=1000):
+    np.random.seed(42)
+    A = np.random.rand(N, N)
+
+    @timing
+    def row_major_sum(A):
+        np.sum(A, axis=1)
+
+    @timing
+    def column_major_sum(A):
+        np.sum(A, axis=0)
+
+    print("Using C order:")
+    row_major_sum(A)
+    column_major_sum(A)
+
+    print("\nUsing Fortran order:")
+    A_F = np.asfortranarray(A)
+    row_major_sum(A_F)
+    column_major_sum(A_F)
+
+def w2_scaling():
+    sizes = [1024, 2048, 4096, 8192]
+    times = []
+    for size in sizes:
+        time, _ = benchmark(w2_main, 100, (-2.0, 1.0), (-1.5, 1.5), size, n_runs=1)
+        times.append(time)
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(sizes, times, marker='o')
+    plt.title('Execution Time vs Window Size for w2_main')
+    plt.xlabel('Window Size (win_size)')
+    plt.ylabel('Execution Time (seconds)')
+    plt.show()
+    return sizes, times
+
+
+def benchmark_all(n_runs=3):
+    median_w1, mandelbrot_set_w1 = benchmark(w1_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
+    median_w2, mandelbrot_set_w2 = benchmark(w2_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
+    median_w1_5, mandelbrot_set_w1_5 = benchmark(w_1_5_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
+    if np.allclose(mandelbrot_set_w1, mandelbrot_set_w2):
+        print("All implementations produce the same result.")
+    else:
+        print("Results differ between implementations.")
+        diff = np.abs(mandelbrot_set_w1 - mandelbrot_set_w2)
+        print(f"Max difference: {np.max(diff)}")
 
 if __name__ == "__main__":
-    def benchmark_all(n_runs=3):
-        median_w1, mandelbrot_set_w1 = benchmark(w1_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
-        median_w2, mandelbrot_set_w2 = benchmark(w2_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
-        median_w1_5, mandelbrot_set_w1_5 = benchmark(w_1_5_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
-        if np.allclose(mandelbrot_set_w1, mandelbrot_set_w2):
-            print("All implementations produce the same result.")
-        else:
-            print("Results differ between implementations.")
-
-    benchmark_all(n_runs=1)
-    # plt.imshow(mandelbrot_set_w1_5, cmap='twilight_shifted_r')
+    w2_main(win_size=1024)
+    # mandelbrot_set= w_1_5_main(win_size=1024)
+    # plt.imshow(mandelbrot_set, cmap='twilight_shifted_r')
     # plt.colorbar()
     # plt.show()
     
