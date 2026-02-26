@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import time
-from numba import jit, njit
+from numba import jit, njit, prange
 import cProfile
 from line_profiler import profile
 
@@ -211,6 +211,20 @@ def w3_f(C: np.ndarray[complex], mandelbrot_set: np.ndarray, max_iters: int) -> 
                 mandelbrot_set[i,j] = max_iters
     return mandelbrot_set
 
+
+@timing
+@njit(parallel=True)
+def w3_parallel(C: np.ndarray[complex], mandelbrot_set: np.ndarray, winsize: int,  max_iters: int) -> np.ndarray:
+    for i in prange(winsize):
+        for j in prange(winsize):
+            z = 0j
+            n = 0
+            while n < max_iters and z. real *z . real +z. imag *z . imag <= 4.0:
+                z = z*z + C[i, j]
+                n += 1
+            mandelbrot_set [i , j ] = n
+    return mandelbrot_set
+
 def w3_main(max_iters: int = 100, 
         x_set: tuple = (-2.0, 1.0),    # Changed to tuple + floats
         y_set: tuple = (-1.5, 1.5),    # Changed to tuple + floats
@@ -236,6 +250,70 @@ def w3_main(max_iters: int = 100,
     mandelbrot_set = w3_f(C, mandelbrot_set, max_iters)
     return mandelbrot_set
 
+def w3_parallel_main(max_iters: int = 100, 
+        x_set: tuple = (-2.0, 1.0),    # Changed to tuple + floats
+        y_set: tuple = (-1.5, 1.5),    # Changed to tuple + floats
+        win_size: int = 100,
+        dtype: np.dtype = np.float64) -> np.ndarray :
+    """Generate and plot the Mandelbrot set.
+    Args: 
+        max_iter (int): Maximum number of iterations.
+        x_set (tuple): X-axis range.
+        y_set (tuple): Y-axis range.
+        win_size (int): Number of points in each axis.
+    Returns:
+        np.ndarray: Mandelbrot set values in a 2D array.
+    """
+    width = np.linspace(x_set[0], x_set[1], win_size, dtype=dtype)
+    height = np.linspace(y_set[0], y_set[1], win_size, dtype=dtype)
+    X, Y = np.meshgrid(width, height)
+    C = X + 1j * Y
+    
+    # Based on the 100x100 points, compute the mandelbrot set
+    mandelbrot_set = np.zeros(C.shape, dtype=np.int32)
+    # Compute the Mandelbrot set using the function f 
+    mandelbrot_set = w3_parallel(C, mandelbrot_set, win_size, max_iters)
+    return mandelbrot_set
+
+@njit
+def mandelbrot_calc(c, max_iters=100):
+    z = 0j
+    for n in range (max_iters) :
+        if z.real * z.real + z.imag * z.imag > 4.0:
+            return n
+        z = z *z + c
+    return max_iters
+
+@timing
+def numba_hybrid(max_iters: int = 100, 
+        x_set: tuple = (-2.0, 1.0),    # Changed to tuple + floats
+        y_set: tuple = (-1.5, 1.5),    # Changed to tuple + floats
+        win_size: int = 100,
+        dtype: np.dtype = np.float64) -> np.ndarray :
+    """Generate and plot the Mandelbrot set.
+    Args: 
+        max_iter (int): Maximum number of iterations.
+        x_set (tuple): X-axis range.
+        y_set (tuple): Y-axis range.
+        win_size (int): Number of points in each axis.
+    Returns:
+        np.ndarray: Mandelbrot set values in a 2D array.
+    """
+
+    width = np.linspace(x_set[0], x_set[1], win_size, dtype=dtype)
+    height = np.linspace(y_set[0], y_set[1], win_size, dtype=dtype)
+    X, Y = np.meshgrid(width, height)
+    C = X + 1j * Y
+    
+    # Based on the 100x100 points, compute the mandelbrot set
+    mandelbrot_set = np.zeros(C.shape, dtype=np.int32)
+    
+    for i in range(len(height)):
+        for j in range(len(width)):
+            c = C[i, j]
+            mandelbrot_set[i ,j] = mandelbrot_calc(c , max_iters)
+    return mandelbrot_set
+
 def benchmark_all(n_runs=3):
     print('Week 1: Naive python implementatio ')
     median_w1, mandelbrot_set_w1 = benchmark(w1_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
@@ -252,6 +330,13 @@ def benchmark_dtype(n_runs):
     median_w3_64, mandelbrot_set_w3 = benchmark(w3_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, np.float64, n_runs=n_runs)
     median_w3_64, mandelbrot_set_w3 = benchmark(w3_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, np.float32, n_runs=n_runs)
 
+def benchmark_numba_imp(n_runs=3):
+    print('full jit approach')
+    benchmark(w3_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, np.float64, n_runs=n_runs)
+    print('Python loops approach')
+    benchmark(numba_hybrid, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, np.float64, n_runs=n_runs)
+    print('Parallel numba')
+    benchmark(w3_parallel_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, np.float64, n_runs=n_runs)
 
 if __name__ == "__main__":
     #seahorse = w_1_5_main(max_iters=500, x_set=(-0.8, -0.7), y_set=(0.05, 0.15), win_size=1024)
@@ -259,7 +344,7 @@ if __name__ == "__main__":
     #deep_seahorse = w_1_5_main(max_iters=2000, x_set=(-0.7487667139, -0.7487667078), y_set=(0.1236408449, 0.1236408510), win_size=1024)
     #mandelbrot_set= w3_main(win_size=1024)
     
-    benchmark_all()
+    benchmark_numba_imp()
     # plt.imshow(w3_mandel, cmap='twilight_shifted_r')
     # plt.colorbar()
     # plt.show()
