@@ -209,3 +209,5 @@ __marimo__/
 
 
 mprofile*
+*.prof
+*.lprof
