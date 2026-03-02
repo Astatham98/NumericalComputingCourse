@@ -31,8 +31,9 @@ def benchmark(func, *args, n_runs=3):
         end_time = time.perf_counter()
         times.append(end_time - start_time)
     median = np.median(times)
+    variance = np.var(times)
     print(f"Median execution time over {n_runs} runs: {median:.6f} seconds")
-    return median, result
+    return median, result, variance
 
 @timing
 def w1_main(max_iters: int = 100, 
@@ -316,28 +317,29 @@ def numba_hybrid(max_iters: int = 100,
 
 def benchmark_all(n_runs=3):
     print('Week 1: Naive python implementatio ')
-    median_w1, mandelbrot_set_w1 = benchmark(w1_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
+    median_w1, mandelbrot_set_w1, var_w1 = benchmark(w1_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
     print('Week 2: numpy vectorization')
-    median_w2, mandelbrot_set_w2 = benchmark(w2_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
+    median_w2, mandelbrot_set_w2, var_w2 = benchmark(w2_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
     print('Week 3: Naive numba')
-    median_w1_5, mandelbrot_set_w1_5 = benchmark(w_1_5_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
+    median_w1_5, mandelbrot_set_w1_5, var_w1_5 = benchmark(w_1_5_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
     print('Weel 3: optimized numba')
-    median_w3, mandelbrot_set_w3 = benchmark(w3_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
+    median_w3, mandelbrot_set_w3, var_w3 = benchmark(w3_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
 
-    return median_w1, median_w2, median_w1_5, median_w3
+    return median_w1, median_w2, median_w1_5, median_w3, var_w1, var_w2, var_w1_5, var_w3
 
 def benchmark_dtype(n_runs):
-    median_w3_64, mandelbrot_set_w3 = benchmark(w3_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, np.float64, n_runs=n_runs)
-    median_w3_64, mandelbrot_set_w3 = benchmark(w3_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, np.float32, n_runs=n_runs)
+    median_w3_64, mandelbrot_set_w3_64, v64 = benchmark(w3_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, np.float64, n_runs=n_runs)
+    median_w3_32, mandelbrot_set_w3_32, v32 = benchmark(w3_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, np.float32, n_runs=n_runs)
 
+    return median_w3_64, mandelbrot_set_w3_64, median_w3_32, mandelbrot_set_w3_32, v64, v32
 def benchmark_numba_imp(n_runs=3):
     print('full jit approach')
-    benchmark(w3_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, np.float64, n_runs=n_runs)
+    w3_median, w3_res, w3_var = benchmark(w3_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, np.float64, n_runs=n_runs)
     print('Python loops approach')
-    benchmark(numba_hybrid, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, np.float64, n_runs=n_runs)
+    hyb_median, hyb_res, hyb_var = benchmark(numba_hybrid, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, np.float64, n_runs=n_runs)
     print('Parallel numba')
-    benchmark(w3_parallel_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, np.float64, n_runs=n_runs)
-
+    par_median, par_res, par_var = benchmark(w3_parallel_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, np.float64, n_runs=n_runs)
+    return w3_median, w3_var, hyb_median, hyb_var, par_median, par_var
 if __name__ == "__main__":
     #seahorse = w_1_5_main(max_iters=500, x_set=(-0.8, -0.7), y_set=(0.05, 0.15), win_size=1024)
     #elephant = w_1_5_main(max_iters=500, x_set=(0.175, 0.375), y_set=(-0.1, 0.1), win_size=1024)
