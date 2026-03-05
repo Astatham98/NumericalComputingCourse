@@ -2,9 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 from numba import jit, njit, prange
-import cProfile
 from line_profiler import profile
-
+from typing import Tuple, List, Dict
+from multiprocessing import Pool
+import psutil
+from multiprocessing_helpers import mandelbrot_serial, mandelbrot_parallel
 
 
 """
@@ -22,8 +24,17 @@ def timing(func):
         return result
     return wrapper
 
-def benchmark(func, *args, n_runs=3):
-    """Run a function multiple times and print the average execution time."""
+def benchmark(func, *args, n_runs=3) -> Tuple[float, np.ndarray, float]:
+    """Run a function multiple times and print the average execution time.
+    Args:
+        func: The function to benchmark.
+        *args: The arguments to pass to the function.
+        n_runs: The number of times to run the function.
+    Returns:
+        float: The median execution time in seconds.
+        np.ndarray: The result of the function.
+        float: The variance of the execution times.
+    """
     times = []
     for _ in range(n_runs):
         start_time = time.perf_counter()
@@ -199,6 +210,16 @@ def w2_scaling():
 @timing
 @njit
 def w3_f(C: np.ndarray[complex], mandelbrot_set: np.ndarray, max_iters: int) -> np.ndarray:
+    """_summary_
+
+    Args:
+        C (np.ndarray[complex]): _description_
+        mandelbrot_set (np.ndarray): _description_
+        max_iters (int): _description_
+
+    Returns:
+        np.ndarray: _description_
+    """
     for i, col in enumerate(C):
         for j, c in enumerate(col):
             z = 0j
@@ -227,8 +248,8 @@ def w3_parallel(C: np.ndarray[complex], mandelbrot_set: np.ndarray, winsize: int
     return mandelbrot_set
 
 def w3_main(max_iters: int = 100, 
-        x_set: tuple = (-2.0, 1.0),    # Changed to tuple + floats
-        y_set: tuple = (-1.5, 1.5),    # Changed to tuple + floats
+        x_set: Tuple[float, float] = (-2.0, 1.0),    # Changed to tuple + floats
+        y_set: Tuple[float, float] = (-1.5, 1.5),    # Changed to tuple + floats
         win_size: int = 100,
         dtype: np.dtype = np.float64) -> np.ndarray :
     """Generate and plot the Mandelbrot set.
@@ -237,6 +258,7 @@ def w3_main(max_iters: int = 100,
         x_set (tuple): X-axis range.
         y_set (tuple): Y-axis range.
         win_size (int): Number of points in each axis.
+        dtype (np.dtype): Data type for the Mandelbrot set.
     Returns:
         np.ndarray: Mandelbrot set values in a 2D array.
     """
@@ -332,6 +354,49 @@ def benchmark_dtype(n_runs):
     median_w3_32, mandelbrot_set_w3_32, v32 = benchmark(w3_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, np.float32, n_runs=n_runs)
 
     return median_w3_64, mandelbrot_set_w3_64, median_w3_32, mandelbrot_set_w3_32, v64, v32
+
+def w4_monte_carlo(NUM_RUNS: int = 10_000) -> None:
+    """
+    Run Monte Carlo simulations for estimation of pi using Circle and Parallel
+    implementations.
+
+    Parameters:
+    NUM_RUNS (int): Number of Monte Carlo simulations to run. Default is 10_000.
+    """
+    from multiprocessing_helpers import estimate_pi_circle, estimate_pi_parallel
+    benchmark(estimate_pi_circle, NUM_RUNS, n_runs=3)
+    for i in range(psutil.cpu_count(logical=False)):
+        print(f'Running on {i+1} cores')
+        benchmark(estimate_pi_parallel, NUM_RUNS, i+1, n_runs=3)
+
+def w4_main(max_iters: int = 100, 
+        x_set: Tuple[float, float] = (-2.0, 1.0),    # Changed to tuple + floats
+        y_set: Tuple[float, float] = (-1.5, 1.5),    # Changed to tuple + floats
+        win_size: int = 100,
+        dtype: np.dtype = np.float64) -> np.ndarray :
+    """Generate and plot the Mandelbrot set.
+    Args: 
+        max_iter (int): Maximum number of iterations.
+        x_set (tuple): X-axis range.
+        y_set (tuple): Y-axis range.
+        win_size (int): Number of points in each axis.
+        dtype (np.dtype): Data type for the Mandelbrot set.
+    Returns:
+        np.ndarray: Mandelbrot set values in a 2D array.
+    """
+    print('Benchmarking serial approach')
+    benchmark(mandelbrot_serial, win_size, x_set[0], x_set[1], y_set[0], y_set[1], max_iters, n_runs=4)
+    
+    medians = []
+    print('Benchmarking parallel approach')
+    for n_cores in range(1, psutil.cpu_count()+1):
+        print(f'Running on {n_cores} cores')
+        mandelbrot_set, timings = mandelbrot_parallel(win_size, x_set[0], x_set[1], y_set[0], y_set[1], max_iters, n_cores)
+        #[print(f"Execution took: {t:.6f} seconds \n") for t in timings]
+        print(f'Median execution time over 3 runs for {n_cores}: {np.median(timings):.6f} seconds')
+        medians.append(np.median(timings))
+    return mandelbrot_set, medians
+
 def benchmark_numba_imp(n_runs=3):
     print('full jit approach')
     w3_median, w3_res, w3_var = benchmark(w3_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, np.float64, n_runs=n_runs)
@@ -346,7 +411,10 @@ if __name__ == "__main__":
     #deep_seahorse = w_1_5_main(max_iters=2000, x_set=(-0.7487667139, -0.7487667078), y_set=(0.1236408449, 0.1236408510), win_size=1024)
     #mandelbrot_set= w3_main(win_size=1024)
     
-    benchmark_numba_imp()
+    set, medians = w4_main(win_size=1024)    
+    from multiprocessing_helpers import plot_medians
+    plot_medians(medians, range(1, len(medians)+1))
+    # w4_monte_carlo(NUM_RUNS=10_000)
     # plt.imshow(w3_mandel, cmap='twilight_shifted_r')
     # plt.colorbar()
     # plt.show()
