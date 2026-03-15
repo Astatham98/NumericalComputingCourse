@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 from numba import jit, njit, prange
-from line_profiler import profile
+#from line_profiler import profile
 from typing import Tuple, List, Dict
 from multiprocessing import Pool
 import psutil
@@ -338,7 +338,7 @@ def numba_hybrid(max_iters: int = 100,
     return mandelbrot_set
 
 
-def w4_main(max_iters: int = 100, 
+def w4_testing(max_iters: int = 100, 
         x_set: Tuple[float, float] = (-2.0, 1.0),    # Changed to tuple + floats
         y_set: Tuple[float, float] = (-1.5, 1.5),    # Changed to tuple + floats
         win_size: int = 100,
@@ -366,6 +366,48 @@ def w4_main(max_iters: int = 100,
         medians.append(np.median(timings))
     return mandelbrot_set, medians
 
+def w4_main(max_iters: int = 100, 
+        x_set: Tuple[float, float] = (-2.0, 1.0),    # Changed to tuple + floats
+        y_set: Tuple[float, float] = (-1.5, 1.5),    # Changed to tuple + floats
+        win_size: int = 100,
+        dtype: np.dtype = np.float64,
+        NoCores: int = psutil.cpu_count(),
+        n_runs: int = 3) -> np.ndarray :
+    """Generate and plot the Mandelbrot set.
+    Args: 
+        max_iter (int): Maximum number of iterations.
+        x_set (tuple): X-axis range.
+        y_set (tuple): Y-axis range.
+        win_size (int): Number of points in each axis.
+        dtype (np.dtype): Data type for the Mandelbrot set.
+        NoCores (int): Number of cores to use.
+        n_runs (int): Number of times to run the computation.
+    Returns:
+        np.ndarray: Mandelbrot set values in a 2D array.
+    """
+
+    mandelbrot_set, timings = mandelbrot_parallel(win_size, x_set[0], x_set[1], y_set[0], y_set[1], max_iters, NoCores, n_runs)
+    return np.median(timings), mandelbrot_set, np.var(timings) 
+
+
+
+def w5_main(max_iters: int = 100, 
+        x_set: Tuple[float, float] = (-2.0, 1.0),    # Changed to tuple + floats
+        y_set: Tuple[float, float] = (-1.5, 1.5),    # Changed to tuple + floats
+        win_size: int = 100,
+        dtype: np.dtype = np.float64) -> np.ndarray :
+    """Generate and plot the Mandelbrot set.
+    Args: 
+        max_iter (int): Maximum number of iterations.
+        x_set (tuple): X-axis range.
+        y_set (tuple): Y-axis range.
+        win_size (int): Number of points in each axis.
+        dtype (np.dtype): Data type for the Mandelbrot set.
+    Returns:
+        np.ndarray: Mandelbrot set values in a 2D array.
+    """
+    pass
+
 def benchmark_all(n_runs=3):
     print('Week 1: Naive python implementatio ')
     median_w1, mandelbrot_set_w1, var_w1 = benchmark(w1_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
@@ -375,10 +417,13 @@ def benchmark_all(n_runs=3):
     median_w1_5, mandelbrot_set_w1_5, var_w1_5 = benchmark(w_1_5_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
     print('Weel 3: optimized numba')
     median_w3, mandelbrot_set_w3, var_w3 = benchmark(w3_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
-    medians_w4, mandelbrot_set_w4 = benchmark(w4_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
-    median_w4 = np.min(medians_w4)
-
-    return median_w1, median_w2, median_w1_5, median_w3, var_w1, var_w2, var_w1_5, var_w3, median_w4
+    print('Week 4: parallel computing')
+    # W4 main now uses its own timings and we do not want to time the workers in the benchmark
+    median_w4, mandelbrot_set_w4, var_w4 = w4_main(100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
+    print(f'w4 median_w4 {median_w4}, w4 variance {var_w4}')
+    #median_w5, mandelbrot_set_w5, var_w5 = benchmark(w5_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
+    
+    return median_w1, median_w2, median_w1_5, median_w3, var_w1, var_w2, var_w1_5, var_w3, median_w4, var_w4
 
 def benchmark_dtype(n_runs):
     median_w3_64, mandelbrot_set_w3_64, v64 = benchmark(w3_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, np.float64, n_runs=n_runs)
@@ -416,11 +461,14 @@ if __name__ == "__main__":
     #seahorse = w_1_5_main(max_iters=500, x_set=(-0.8, -0.7), y_set=(0.05, 0.15), win_size=1024)
     #elephant = w_1_5_main(max_iters=500, x_set=(0.175, 0.375), y_set=(-0.1, 0.1), win_size=1024)
     #deep_seahorse = w_1_5_main(max_iters=2000, x_set=(-0.7487667139, -0.7487667078), y_set=(0.1236408449, 0.1236408510), win_size=1024)
-    #mandelbrot_set= w3_main(win_size=1024)
+
     
-    set, medians = w4_main(win_size=1024)    
-    from multiprocessing_helpers import plot_medians
-    plot_medians(medians, range(1, len(medians)+1))
+    benchmark_all(n_runs=3)    
+    
+    
+    # mandelbrot_set, medians = w4_main(win_size=1024)    
+    # from multiprocessing_helpers import plot_medians
+    # plot_medians(medians, range(1, len(medians)+1))
     # w4_monte_carlo(NUM_RUNS=10_000)
     # plt.imshow(w3_mandel, cmap='twilight_shifted_r')
     # plt.colorbar()

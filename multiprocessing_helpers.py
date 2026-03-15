@@ -129,7 +129,7 @@ def mandelbrot_serial(N, x_min, x_max, y_min, y_max, max_iter=100):
 def _worker(args):
     return compute_mandelbrot_chunk(*args)
 
-def mandelbrot_parallel(N, x_min, x_max, y_min, y_max, max_iter=100, num_processes=4):
+def mandelbrot_parallel(N, x_min, x_max, y_min, y_max, max_iter=100, num_processes=4, NoRuns=3):
     """
     Computes the Mandelbrot set in parallel.
 
@@ -141,9 +141,11 @@ def mandelbrot_parallel(N, x_min, x_max, y_min, y_max, max_iter=100, num_process
         y_max (float): The maximum value of the y-axis.
         max_iter (int): The maximum number of iterations. Defaults to 100.
         num_processes (int): The number of processes to use in parallel. Defaults to 4.
+        NoRuns (int): The number of times to run the computation. Defaults to 3.
 
     Returns:
-        np.ndarray: A 2D array containing the computed Mandelbrot set values.
+        total (np.ndarray): A 2D array containing the computed Mandelbrot set values.
+        times (list): A list of execution times for each process.
     """
     times = []
 
@@ -156,7 +158,7 @@ def mandelbrot_parallel(N, x_min, x_max, y_min, y_max, max_iter=100, num_process
 
     with Pool(processes=num_processes) as pool:
         pool.map(_worker, chunks)
-        for _ in range(3):
+        for _ in range(NoRuns):
             start_time = time.perf_counter()
             results = pool.map(_worker, chunks)
             total = np.vstack(results)
