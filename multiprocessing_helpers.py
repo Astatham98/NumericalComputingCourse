@@ -66,10 +66,38 @@ def estimate_pi_parallel(num_samples, num_processes=4):
         results = pool.map(estimate_pi_chunk, tasks)
     return 4 * sum(results) / num_samples
 
+def test_granulaity(total_work, chunk_size, num_processes):
+    n_chunks = total_work // chunk_size
+    tasks = [chunk_size] * n_chunks
+    t0 = time.perf_counter()
+    if num_processes == 1:
+        results = [estimate_pi_chunk(t) for t in tasks]
+    else:
+        with Pool(processes=num_processes) as pool:
+            results = pool.map(estimate_pi_chunk, tasks)
+    t1 = time.perf_counter()
+    return t1 - t0, 4 * sum(results) / total_work
 
-# mandelbrot jit
+def subtract_seven(n):
+    return n - 7
 
-@njit
+def MFR(N=1_000_000, ran_range=[10, 100]):
+    rands = [random.randint(ran_range[0], ran_range[1]) for n in range(N)]
+    t0 = time.perf_counter()
+    nums = map(subtract_seven, rands)
+    odds = filter(lambda n: n % 2 == 1, nums)
+    return sum(odds), time.perf_counter() - t0
+
+def MPF(N=1_000_000, ran_range=[10, 100], num_processes=4):
+    rands = [random.randint(ran_range[0], ran_range[1]) for n in range(N)]
+    with Pool(num_processes) as pool:
+        t0 = time.perf_counter()
+        nums = pool.map(subtract_seven, rands)
+    odds = filter(lambda n: n % 2 == 1, nums)
+    return sum(odds), time.perf_counter() - t0
+    
+
+@njit(cache=True)
 def mandelbrot_pixel(c_real, c_imag, max_iter):
     z_real = z_imag = 0.0
     for i in range(max_iter):
@@ -80,7 +108,7 @@ def mandelbrot_pixel(c_real, c_imag, max_iter):
         z_real = z_real*z_real - z_imag*z_imag + c_real
     return max_iter
 
-@njit
+@njit(cache=True)
 def compute_mandelbrot_chunk(start_row, end_row, num_points,
 min_x, max_x, min_y, max_y, max_iterations):
     """
@@ -129,6 +157,21 @@ def mandelbrot_serial(N, x_min, x_max, y_min, y_max, max_iter=100):
 def _worker(args):
     return compute_mandelbrot_chunk(*args)
 
+def get_pool(n_processes, grid):
+    """
+    Get a multiprocessing pool from the given grid of arguments.
+
+    Args:
+        n_processes (int): The number of processes to use in the pool.
+        grid (list of tuples): A list of tuples containing the arguments to pass to _worker for warmup.
+
+    Returns:
+        multiprocessing.Pool: A multiprocessing pool object.
+    """
+    pool = Pool(processes=n_processes)
+    pool.map(_worker, grid)
+    return pool
+
 def mandelbrot_parallel(N, x_min, x_max, y_min, y_max, max_iter=100, num_processes=4, NoRuns=3):
     """
     Computes the Mandelbrot set in parallel.
@@ -166,6 +209,30 @@ def mandelbrot_parallel(N, x_min, x_max, y_min, y_max, max_iter=100, num_process
             times.append(end_time - start_time)
     return total, times
 
+def mandelbrot_parallel_chunks(N, x_min, x_max, y_min, y_max,
+                        max_iter=100, n_workers=4, n_chunks=None, pool=None):
+    if n_chunks is None:
+        n_chunks = n_workers
+    chunk_size = max(1, N // n_chunks)
+    chunks, row = [], 0
+    while row < N:
+        row_end = min(row + chunk_size, N)
+        chunks.append((row, row_end, N, x_min, x_max, y_min, y_max, max_iter))
+        row = row_end
+    if pool is not None: # caller manages Pool; skip startup + warm-up
+        t0 = time.perf_counter()
+        res = np.vstack(pool.map(_worker, chunks))
+        end_time = time.perf_counter() - t0
+        return res, end_time
+    tiny = [(0, 8, 8, x_min, x_max, y_min, y_max, max_iter)]
+    with Pool(processes=n_workers) as p:
+        p.map(_worker, tiny) # warm-up: load JIT cache in workers
+        t0 = time.perf_counter()
+        parts = p.map(_worker, chunks)
+    res = np.vstack(parts)
+    end_time = time.perf_counter() - t0
+    return res, end_time
+
 def plot_medians(median_vals, cores):
     from matplotlib import pyplot as plt
     plt.figure(figsize=(10, 6))
@@ -174,3 +241,6 @@ def plot_medians(median_vals, cores):
     plt.xlabel('Number of Cores')
     plt.ylabel('Median Execution Time (seconds)')
     plt.show()
+    
+if __name__ == "__main__":
+    pass
