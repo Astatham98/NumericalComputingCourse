@@ -337,37 +337,6 @@ def numba_hybrid(max_iters: int = 100,
             mandelbrot_set[i ,j] = mandelbrot_calc(c , max_iters)
     return mandelbrot_set
 
-def benchmark_all(n_runs=3):
-    print('Week 1: Naive python implementatio ')
-    median_w1, mandelbrot_set_w1, var_w1 = benchmark(w1_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
-    print('Week 2: numpy vectorization')
-    median_w2, mandelbrot_set_w2, var_w2 = benchmark(w2_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
-    print('Week 3: Naive numba')
-    median_w1_5, mandelbrot_set_w1_5, var_w1_5 = benchmark(w_1_5_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
-    print('Weel 3: optimized numba')
-    median_w3, mandelbrot_set_w3, var_w3 = benchmark(w3_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
-
-    return median_w1, median_w2, median_w1_5, median_w3, var_w1, var_w2, var_w1_5, var_w3
-
-def benchmark_dtype(n_runs):
-    median_w3_64, mandelbrot_set_w3_64, v64 = benchmark(w3_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, np.float64, n_runs=n_runs)
-    median_w3_32, mandelbrot_set_w3_32, v32 = benchmark(w3_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, np.float32, n_runs=n_runs)
-
-    return median_w3_64, mandelbrot_set_w3_64, median_w3_32, mandelbrot_set_w3_32, v64, v32
-
-def w4_monte_carlo(NUM_RUNS: int = 10_000) -> None:
-    """
-    Run Monte Carlo simulations for estimation of pi using Circle and Parallel
-    implementations.
-
-    Parameters:
-    NUM_RUNS (int): Number of Monte Carlo simulations to run. Default is 10_000.
-    """
-    from multiprocessing_helpers import estimate_pi_circle, estimate_pi_parallel
-    benchmark(estimate_pi_circle, NUM_RUNS, n_runs=3)
-    for i in range(psutil.cpu_count(logical=False)):
-        print(f'Running on {i+1} cores')
-        benchmark(estimate_pi_parallel, NUM_RUNS, i+1, n_runs=3)
 
 def w4_main(max_iters: int = 100, 
         x_set: Tuple[float, float] = (-2.0, 1.0),    # Changed to tuple + floats
@@ -397,6 +366,42 @@ def w4_main(max_iters: int = 100,
         medians.append(np.median(timings))
     return mandelbrot_set, medians
 
+def benchmark_all(n_runs=3):
+    print('Week 1: Naive python implementatio ')
+    median_w1, mandelbrot_set_w1, var_w1 = benchmark(w1_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
+    print('Week 2: numpy vectorization')
+    median_w2, mandelbrot_set_w2, var_w2 = benchmark(w2_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
+    print('Week 3: Naive numba')
+    median_w1_5, mandelbrot_set_w1_5, var_w1_5 = benchmark(w_1_5_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
+    print('Weel 3: optimized numba')
+    median_w3, mandelbrot_set_w3, var_w3 = benchmark(w3_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
+    medians_w4, mandelbrot_set_w4 = benchmark(w4_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
+    median_w4 = np.min(medians_w4)
+
+    return median_w1, median_w2, median_w1_5, median_w3, var_w1, var_w2, var_w1_5, var_w3, median_w4
+
+def benchmark_dtype(n_runs):
+    median_w3_64, mandelbrot_set_w3_64, v64 = benchmark(w3_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, np.float64, n_runs=n_runs)
+    median_w3_32, mandelbrot_set_w3_32, v32 = benchmark(w3_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, np.float32, n_runs=n_runs)
+
+    return median_w3_64, mandelbrot_set_w3_64, median_w3_32, mandelbrot_set_w3_32, v64, v32
+
+def w4_monte_carlo(NUM_RUNS: int = 10_000) -> None:
+    """
+    Run Monte Carlo simulations for estimation of pi using Circle and Parallel
+    implementations.
+
+    Parameters:
+    NUM_RUNS (int): Number of Monte Carlo simulations to run. Default is 10_000.
+    """
+    from multiprocessing_helpers import estimate_pi_circle, estimate_pi_parallel
+    benchmark(estimate_pi_circle, NUM_RUNS, n_runs=3)
+    for i in range(psutil.cpu_count(logical=False)):
+        print(f'Running on {i+1} cores')
+        benchmark(estimate_pi_parallel, NUM_RUNS, i+1, n_runs=3)
+
+
+
 def benchmark_numba_imp(n_runs=3):
     print('full jit approach')
     w3_median, w3_res, w3_var = benchmark(w3_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, np.float64, n_runs=n_runs)
@@ -405,6 +410,8 @@ def benchmark_numba_imp(n_runs=3):
     print('Parallel numba')
     par_median, par_res, par_var = benchmark(w3_parallel_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, np.float64, n_runs=n_runs)
     return w3_median, w3_var, hyb_median, hyb_var, par_median, par_var
+
+
 if __name__ == "__main__":
     #seahorse = w_1_5_main(max_iters=500, x_set=(-0.8, -0.7), y_set=(0.05, 0.15), win_size=1024)
     #elephant = w_1_5_main(max_iters=500, x_set=(0.175, 0.375), y_set=(-0.1, 0.1), win_size=1024)
