@@ -6,8 +6,8 @@ from numba import jit, njit, prange
 from typing import Tuple, List, Dict
 from multiprocessing import Pool
 import psutil
-from multiprocessing_helpers import mandelbrot_serial, mandelbrot_parallel, mandelbrot_parallel_chunks, get_pool
-
+from multiprocessing_helpers import mandelbrot_serial, mandelbrot_parallel, mandelbrot_parallel_chunks, get_pool, compute_mandelbrot_chunk
+from distributed_helpers import mandelbrot_dask_worker, load_dask_client
 
 """
 Mandelbrot Set Generator
@@ -449,6 +449,93 @@ def w5_testing(process_max: int = 4, n_runs: int = 3):
         median, _, var = w5_main(NoProcesses=4*n, n_runs=n_runs)
         print(f'Median execution time over {n_runs} runs for {4*n}: {median:.6f} seconds')   
 
+def w6_testing(max_iters: int = 100, 
+        x_set: Tuple[float, float] = (-2.0, 1.0),    # Changed to tuple + floats
+        y_set: Tuple[float, float] = (-1.5, 1.5),    # Changed to tuple + floats
+        win_size: int = 100,
+        dtype: np.dtype = np.float64,
+        NoProcesses: int = 8,
+        n_runs: int = 3, 
+        testing_chunks: List[int] = [64, 128, 256, 512]) -> np.ndarray :
+    """Generate and plot the Mandelbrot set.
+    Args: 
+        max_iter (int): Maximum number of iterations.
+        x_set (tuple): X-axis range.
+        y_set (tuple): Y-axis range.
+        win_size (int): Number of points in each axis.
+        dtype (np.dtype): Data type for the Mandelbrot set.
+    Returns:
+        np.ndarray: Mandelbrot set values in a 2D array.
+    """
+
+    #Warmup
+    client, cluster = load_dask_client(NoProcesses, 1)
+    client.run(lambda: compute_mandelbrot_chunk(0, 8, 8, x_set[0], x_set[1], y_set[0], y_set[1], 10))
+    #Get serial time
+    t_serial = get_mandelbrot_serial_time(win_size, x_set, y_set, max_iters)
+
+    chunk_times = {}
+    for chunk in testing_chunks:
+        times = []
+        for _ in range(n_runs):
+            timing, results = mandelbrot_dask_worker(win_size, x_set[0], x_set[1], y_set[0], y_set[1], max_iters, chunks=chunk)
+            times.append(timing)
+        print(f'median time for dask worker: {np.median(times)}')
+        LIF = NoProcesses * np.median(times) / t_serial - 1
+        chunk_times[chunk] = (np.median(times), LIF) 
+    client.close()
+    cluster.close()
+
+    return chunk_times, t_serial
+
+def get_mandelbrot_serial_time(win_size, x_set, y_set, max_iters):
+    mandelbrot_serial(10, x_set[0], x_set[1], y_set[0], y_set[1], max_iters)
+
+    t0 = time.perf_counter()
+    mandelbrot_serial(win_size, x_set[0], x_set[1], y_set[0], y_set[1], max_iters)
+    t1 = time.perf_counter()
+    print(f'Execution for serial took: {t1 - t0:.6f} seconds')
+
+    return t1 - t0
+
+def w6_main(max_iters: int = 100, 
+        x_set: Tuple[float, float] = (-2.0, 1.0),    # Changed to tuple + floats
+        y_set: Tuple[float, float] = (-1.5, 1.5),    # Changed to tuple + floats
+        win_size: int = 100,
+        dtype: np.dtype = np.float64,
+        NoProcesses: int = 8,
+        n_runs: int = 3,
+        chunks: int = 64) -> np.ndarray :
+    """Generate and plot the Mandelbrot set.
+    Args: 
+        max_iter (int): Maximum number of iterations.
+        x_set (tuple): X-axis range.
+        y_set (tuple): Y-axis range.
+        win_size (int): Number of points in each axis.
+        dtype (np.dtype): Data type for the Mandelbrot set.
+    Returns:
+        np.ndarray: Mandelbrot set values in a 2D array.
+    """
+
+    client, cluster = load_dask_client(NoProcesses, 1)
+    client.run(lambda: compute_mandelbrot_chunk(0, 8, 8, x_set[0], x_set[1], y_set[0], y_set[1], 10))
+
+    times = []
+    for _ in range(n_runs):
+        timing, results = mandelbrot_dask_worker(win_size, x_set[0], x_set[1], y_set[0], y_set[1], max_iters, chunks=chunks)
+        times.append(timing)
+    print(f'median time for dask worker: {np.median(times)}')
+
+    client.close()
+    cluster.close()
+    
+    t_serial = get_mandelbrot_serial_time(win_size, x_set, y_set, max_iters)
+
+    LIF = NoProcesses * np.median(times) / t_serial - 1
+
+    return np.median(times), results, np.var(times), LIF
+
+
 def benchmark_all(n_runs=3):
     print('Week 1: Naive python implementatio ')
     median_w1, mandelbrot_set_w1, var_w1 = benchmark(w1_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
@@ -503,8 +590,10 @@ if __name__ == "__main__":
     #elephant = w_1_5_main(max_iters=500, x_set=(0.175, 0.375), y_set=(-0.1, 0.1), win_size=1024)
     #deep_seahorse = w_1_5_main(max_iters=2000, x_set=(-0.7487667139, -0.7487667078), y_set=(0.1236408449, 0.1236408510), win_size=1024)
 
-    t, lif = w5_main(win_size=1024, NoProcesses=8)
-    print(t, lif)
+    
+    chunks = [8, 16, 32, 64, 128, 256, 512, 1024]
+    chunks, t_serial = w6_testing(win_size=4096, n_runs=5, testing_chunks=chunks)
+
     
     
     # mandelbrot_set, medians = w4_main(win_size=1024)    
