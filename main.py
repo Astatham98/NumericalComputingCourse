@@ -389,9 +389,7 @@ def w4_main(max_iters: int = 100,
     mandelbrot_set, timings = mandelbrot_parallel(win_size, x_set[0], x_set[1], y_set[0], y_set[1], max_iters, NoCores, n_runs)
     return np.median(timings), mandelbrot_set, np.var(timings) 
 
-
-
-def w5_main(max_iters: int = 100, 
+def w5_chunk_testing(max_iters: int = 100, 
         x_set: Tuple[float, float] = (-2.0, 1.0),    # Changed to tuple + floats
         y_set: Tuple[float, float] = (-1.5, 1.5),    # Changed to tuple + floats
         win_size: int = 100,
@@ -423,16 +421,51 @@ def w5_main(max_iters: int = 100,
         inner_timings = []
         inner_lifs = []
         for n in range(n_runs):
-            _, timing_p = mandelbrot_parallel_chunks(win_size, x_set[0], x_set[1], y_set[0], y_set[1], max_iters, processers, n_chunks=chunk, pool=pool)
-            print((timing_p / timing_s))
-            print(timing_p, timing_s)
-            lif = processers * (timing_p / timing_s) - 1 
+            mandelbrot_set, timing_p = mandelbrot_parallel_chunks(win_size, x_set[0], x_set[1], y_set[0], y_set[1], max_iters, processers, n_chunks=chunk, pool=pool)
+            lif = ((processers * timing_p) / timing_s) - 1 
             inner_timings.append(timing_p)
             inner_lifs.append(lif)
         print(f'Execution time for {processers} processes and {chunk} chunks: {np.median(inner_timings):.6f} seconds and {np.median(inner_lifs):.6f} lifs')
         outer_timings[f'{processers} processes and {chunk} chunks'] = np.median(inner_timings)
         outer_lifs[f'{processers} processes and {chunk} chunks'] = np.median(inner_lifs)
-    return outer_timings, outer_lifs
+    return outer_timings, outer_lifs, mandelbrot_set
+
+def w5_main(max_iters: int = 100, 
+        x_set: Tuple[float, float] = (-2.0, 1.0),    # Changed to tuple + floats
+        y_set: Tuple[float, float] = (-1.5, 1.5),    # Changed to tuple + floats
+        win_size: int = 100,
+        dtype: np.dtype = np.float64,
+        NoProcesses: int = psutil.cpu_count(),
+        n_runs: int = 3,
+        chunk: int = 8) -> np.ndarray :
+    """Generate and plot the Mandelbrot set.
+    Args: 
+        max_iter (int): Maximum number of iterations.
+        x_set (tuple): X-axis range.
+        y_set (tuple): Y-axis range.
+        win_size (int): Number of points in each axis.
+        dtype (np.dtype): Data type for the Mandelbrot set.
+
+    Returns:
+        np.ndarray: Mandelbrot set values in a 2D array.
+    """
+    tiny = [(0, 8, 8, x_set[0], x_set[1], y_set[0], y_set[1], max_iters)]
+    pool = get_pool(8, tiny)
+    
+    processers = NoProcesses
+    t0 = time.perf_counter()
+    _ = mandelbrot_serial(win_size, x_set[0], x_set[1], y_set[0], y_set[1], max_iters)
+    timing_s = time.perf_counter() - t0
+    
+
+    chunk = processers * chunk
+    timings = []
+    for n in range(n_runs):
+        mandelbrot_set, timing_p = mandelbrot_parallel_chunks(win_size, x_set[0], x_set[1], y_set[0], y_set[1], max_iters, processers, n_chunks=chunk, pool=pool)
+        timings.append(timing_p)
+
+    lif = ((processers * np.median(timings)) / timing_s) - 1
+    return np.median(timings), mandelbrot_set, np.var(timings), lif
 
 def w5_testing(process_max: int = 4, n_runs: int = 3):
     """
@@ -446,7 +479,7 @@ def w5_testing(process_max: int = 4, n_runs: int = 3):
         None
     """
     for n in range(1, process_max+1):
-        median, _, var = w5_main(NoProcesses=4*n, n_runs=n_runs)
+        median, _, var, _ = w5_main(NoProcesses=4*n, n_runs=n_runs)
         print(f'Median execution time over {n_runs} runs for {4*n}: {median:.6f} seconds')   
 
 def w6_testing(max_iters: int = 100, 
@@ -549,9 +582,11 @@ def benchmark_all(n_runs=3):
     # W4 main now uses its own timings and we do not want to time the workers in the benchmark
     median_w4, mandelbrot_set_w4, var_w4 = w4_main(100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
     print(f'w4 median_w4 {median_w4}, \n w4 variance {var_w4}')
-    #median_w5, mandelbrot_set_w5, var_w5 = benchmark(w5_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
+    median_w5, mandelbrot_set_w5, var_w5, w5_LIF = w5_main(100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
     
-    return median_w1, median_w2, median_w1_5, median_w3, median_w4, var_w1, var_w2, var_w1_5, var_w3, var_w4
+    median_w6, mandelbrot_set_26, var_w6, w6_LIF = w6_main(100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs, chunks=48)
+
+    return median_w1, median_w2, median_w1_5, median_w3, median_w4, median_w5, median_w6, var_w1, var_w2, var_w1_5, var_w3, var_w4, var_w5, var_w6
 
 def benchmark_dtype(n_runs):
     median_w3_64, mandelbrot_set_w3_64, v64 = benchmark(w3_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, np.float64, n_runs=n_runs)
@@ -591,8 +626,8 @@ if __name__ == "__main__":
     #deep_seahorse = w_1_5_main(max_iters=2000, x_set=(-0.7487667139, -0.7487667078), y_set=(0.1236408449, 0.1236408510), win_size=1024)
 
     
-    chunks = [8, 16, 32, 64, 128, 256, 512, 1024]
-    chunks, t_serial = w6_testing(win_size=4096, n_runs=5, testing_chunks=chunks)
+    w5_timings, w5_lifs, mandelbrot_set_w5 = w5_chunk_testing(100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=3)
+    print(list(w5_timings.keys())[np.argmin(w5_timings)])
 
     
     
