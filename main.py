@@ -569,6 +569,44 @@ def w6_main(max_iters: int = 100,
     return np.median(times), results, np.var(times), LIF
 
 
+def w7_testing(max_iters: int = 100, 
+        x_set: Tuple[float, float] = (-2.0, 1.0),    # Changed to tuple + floats
+        y_set: Tuple[float, float] = (-1.5, 1.5),    # Changed to tuple + floats
+        win_size: int = 100,
+        dtype: np.dtype = np.float64,
+        NoProcesses: int = 8,
+        n_runs: int = 3, 
+        testing_chunks: List[int] = [64, 128, 256, 512],
+        ip: str = '10.92.0.0') -> np.ndarray :
+    """Generate and plot the Mandelbrot set.
+    Args: 
+        max_iter (int): Maximum number of iterations.
+        x_set (tuple): X-axis range.
+        y_set (tuple): Y-axis range.
+        win_size (int): Number of points in each axis.
+        dtype (np.dtype): Data type for the Mandelbrot set.
+    Returns:
+        np.ndarray: Mandelbrot set values in a 2D array.
+    """
+
+    #Warmup
+    client = load_dask_client(ip)
+    client.run(lambda: compute_mandelbrot_chunk(0, 8, 8, x_set[0], x_set[1], y_set[0], y_set[1], 10))
+    #Get serial time
+    #t_serial = get_mandelbrot_serial_time(win_size, x_set, y_set, max_iters)
+
+    chunk_times = {}
+    for chunk in testing_chunks:
+        times = []
+        for _ in range(n_runs):
+            timing, results = mandelbrot_dask_worker(win_size, x_set[0], x_set[1], y_set[0], y_set[1], max_iters, chunks=chunk)
+            times.append(timing)
+        print(f'median time for dask worker: {np.median(times)}')
+        #LIF = NoProcesses * np.median(times) / t_serial - 1
+        chunk_times[chunk] = np.median(times) 
+    client.close()
+    return chunk_times
+
 def w7_main(max_iters: int = 100, 
         x_set: Tuple[float, float] = (-2.0, 1.0),    # Changed to tuple + floats
         y_set: Tuple[float, float] = (-1.5, 1.5),    # Changed to tuple + floats
@@ -604,12 +642,12 @@ def w7_main(max_iters: int = 100,
 
     client.close()
     
-    t_serial = get_mandelbrot_serial_time(win_size, x_set, y_set, max_iters)
+    #t_serial = get_mandelbrot_serial_time(win_size, x_set, y_set, max_iters)
 
     # TODO change NoProcesses
-    LIF = NoProcesses * np.median(times) / t_serial - 1
+    #LIF = NoProcesses * np.median(times) / t_serial - 1
 
-    return np.median(times), results, np.var(times), LIF
+    return np.median(times), results, np.var(times)
 
 
 def benchmark_all(n_runs=3):
@@ -683,7 +721,7 @@ if __name__ == "__main__":
     #deep_seahorse = w_1_5_main(max_iters=2000, x_set=(-0.7487667139, -0.7487667078), y_set=(0.1236408449, 0.1236408510), win_size=1024)
 
     
-   w7_main(win_size=1024, ip="10.92.0.203")
+   w7_main(win_size=4096, ip="10.92.0.203")
 
     
     
