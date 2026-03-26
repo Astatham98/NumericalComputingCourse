@@ -22,14 +22,18 @@ def monte_carlo_dask(total: int = 1_000_000, chunksize: int = 8):
     return t1 - t0, 4 * sum(results) / total
 
 
-def load_dask_client(workers: int = 4, threads_per_worker: int = 1):
+def load_dask_client_local(workers: int = 4, threads_per_worker: int = 1):
     cluster = LocalCluster(n_workers=workers, threads_per_worker=threads_per_worker)
     client = Client(cluster)
     print(f"Dashboard: {client.dashboard_link}")
     return client, cluster
 
+def load_dask_client(ip):
+    client = Client(f"tcp://{ip}:8786")
+    return client
+
 def monte_carlo_dask_client(total: int = 1_000_000, chunksize: int = 8, workers: int = 4, threads_per_worker: int = 1):
-    client, cluster = load_dask_client(workers, threads_per_worker)
+    client, cluster = load_dask_client_local(workers, threads_per_worker)
     samples = total // chunksize
     task = [delayed(estimate_pi_chunk)(samples) for _ in range(chunksize)]    
     t0 = time.perf_counter()
@@ -69,7 +73,7 @@ if __name__ == "__main__":
 
     N, max_iter = 1024, 100
     X_MIN, X_MAX, Y_MIN, Y_MAX = -2.5, 1.0, -1.25, 1.25
-    client, cluster = load_dask_client(8, 1)
+    client, cluster = load_dask_client_local(8, 1)
     client.run(lambda: compute_mandelbrot_chunk(0, 8, 8, X_MIN, X_MAX, Y_MIN, Y_MAX, 10))
 
     times = []
