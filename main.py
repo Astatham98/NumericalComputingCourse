@@ -656,24 +656,24 @@ def w7_main(max_iters: int = 100,
     return np.median(times), results, np.var(times)
 
 
-def benchmark_all(n_runs=3):
+def benchmark_all(n_runs=3, size=1024):
     print('Week 1: Naive python implementation')
-    median_w1, mandelbrot_set_w1, var_w1 = benchmark(w1_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
+    median_w1, mandelbrot_set_w1, var_w1 = benchmark(w1_main, 100, (-2.0, 1.0), (-1.5, 1.5), size, n_runs=n_runs)
     print('Week 2: numpy vectorization')
-    median_w2, mandelbrot_set_w2, var_w2 = benchmark(w2_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
+    median_w2, mandelbrot_set_w2, var_w2 = benchmark(w2_main, 100, (-2.0, 1.0), (-1.5, 1.5), size, n_runs=n_runs)
     print('Week 3: Naive numba')
-    median_w1_5, mandelbrot_set_w1_5, var_w1_5 = benchmark(w_1_5_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
+    median_w1_5, mandelbrot_set_w1_5, var_w1_5 = benchmark(w_1_5_main, 100, (-2.0, 1.0), (-1.5, 1.5), size, n_runs=n_runs)
     print('Week 3: optimized numba')
-    median_w3, mandelbrot_set_w3, var_w3 = benchmark(w3_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
+    median_w3, mandelbrot_set_w3, var_w3 = benchmark(w3_main, 100, (-2.0, 1.0), (-1.5, 1.5), size, n_runs=n_runs)
     print('Week 4: parallel computing')
     # W4 main now uses its own timings and we do not want to time the workers in the benchmark
-    median_w4, mandelbrot_set_w4, var_w4 = w4_main(100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs)
+    median_w4, mandelbrot_set_w4, var_w4 = w4_main(100, (-2.0, 1.0), (-1.5, 1.5), size, n_runs=n_runs)
     print(f'w4 median_w4 {median_w4}, \nw4 variance {var_w4}')
     print('Week 5: parallel computing with pools')
-    median_w5, mandelbrot_set_w5, var_w5, w5_LIF = w5_main(100, (-2.0, 1.0), (-1.5, 1.5), 1024, chunk=6, n_runs=n_runs)
+    median_w5, mandelbrot_set_w5, var_w5, w5_LIF = w5_main(100, (-2.0, 1.0), (-1.5, 1.5), size, chunk=6, n_runs=n_runs)
     print(f'Median time for w5: {median_w5}, \nw5 variance {var_w5}')
     print('Week 6: Dask local')
-    median_w6, mandelbrot_set_26, var_w6, w6_LIF = w6_main(100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=n_runs, chunks=48)
+    median_w6, mandelbrot_set_26, var_w6, w6_LIF = w6_main(100, (-2.0, 1.0), (-1.5, 1.5), size, n_runs=n_runs, chunks=48)
     print(f'Median time for w6: {median_w6}, \nw6 variance {var_w6}')
     
     benhmark_dict = {
