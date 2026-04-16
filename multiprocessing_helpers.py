@@ -1,5 +1,6 @@
 import random
 import time
+from functools import wraps
 from multiprocessing import Pool
 from multiprocessing.pool import Pool as PoolType
 from typing import Any, Callable
@@ -11,6 +12,7 @@ import numpy.typing as npt
 def timing(func: Callable[..., Any]) -> Callable[..., Any]:
     """Decorator to measure the execution time of a function."""
 
+    @wraps(func)
     def wrapper(*args, **kwargs):
         start_time = time.perf_counter()
         result = func(*args, **kwargs)
@@ -173,8 +175,10 @@ def mandelbrot_pixel(c_real: float, c_imag: float, max_iter: int) -> int:
         z_sq = z_real * z_real + z_imag * z_imag
         if z_sq > 4.0:
             return i
-        z_imag = 2.0 * z_real * z_imag + c_imag
-        z_real = z_real * z_real - z_imag * z_imag + c_real
+        next_real = z_real * z_real - z_imag * z_imag + c_real
+        next_imag = 2.0 * z_real * z_imag + c_imag
+        z_real = next_real
+        z_imag = next_imag
     return max_iter
 
 
@@ -207,7 +211,7 @@ def compute_mandelbrot_chunk(
     """
     result = np.empty((end_row - start_row, num_points), dtype=np.int32)
     x_step = (max_x - min_x) / num_points
-    y_step = (max_y - min_y) / (end_row - start_row)
+    y_step = (max_y - min_y) / num_points
     for row in range(end_row - start_row):
         c_imag = min_y + (row + start_row) * y_step
         for col in range(num_points):

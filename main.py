@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+from functools import wraps
 from numba import jit, njit, prange
 
 # from line_profiler import profile
@@ -31,6 +32,7 @@ Course : Numerical Scientific Computing 2026
 def timing(func: Callable[..., Any]) -> Callable[..., Any]:
     """Decorator to measure the execution time of a function."""
 
+    @wraps(func)
     def wrapper(*args, **kwargs):
         start_time = time.perf_counter()
         result = func(*args, **kwargs)
@@ -66,6 +68,35 @@ def benchmark(
     return median, result, variance
 
 
+def w1_f(
+    points: np.ndarray[complex],
+    mandelbrot_set: np.ndarray[int],
+    max_iters: int = 100,
+) -> np.ndarray:
+    """Compute week-1 Mandelbrot escape counts for a flattened complex grid."""
+    for i, c in enumerate(points):
+        z = 0
+        for j in range(max_iters):
+            z = z**2 + c
+            if abs(z) > 2:
+                mandelbrot_set[i] = j
+                break
+        else:
+            mandelbrot_set[i] = max_iters
+    return mandelbrot_set
+
+
+def w2_f(
+    C: np.ndarray[complex], Z: np.ndarray, M: np.ndarray, max_iters: int
+) -> np.ndarray:
+    """Compute week-2 vectorized Mandelbrot escape counts for a complex grid."""
+    for _ in range(max_iters):
+        mask = np.abs(Z) <= 2
+        Z[mask] = Z[mask] ** 2 + C[mask]
+        M[mask] += 1
+    return M
+
+
 @timing
 def w1_main(
     max_iters: int = 100,
@@ -82,25 +113,6 @@ def w1_main(
     Returns:
         np.ndarray: Mandelbrot set values in a 2D array.
     """
-
-    def w1_f(
-        points: np.ndarray[complex],
-        mandelbrot_Set: np.ndarray[int],
-        max_iters: int = 100,
-    ) -> np.ndarray:
-        for i, c in enumerate(points):
-            z = 0
-            for j in range(max_iters):
-                z = z**2 + c
-                # Break if |Z| > 2
-                if abs(z) > 2:
-                    mandelbrot_set[i] = j
-                    break
-            else:
-                mandelbrot_set[i] = max_iters
-        return mandelbrot_set
-
-    x_set, y_set = [-2, 1], [-1.5, 1.5]
     width = np.linspace(x_set[0], x_set[1], win_size)
     height = np.linspace(y_set[0], y_set[1], win_size)
     points = []
@@ -134,19 +146,6 @@ def w2_main(
         np.ndarray: Mandelbrot set values in a 2D array.
     """
 
-    @timing
-    def f(
-        C: np.ndarray[complex], Z: np.ndarray, M: np.ndarray, max_iters: int
-    ) -> np.ndarray:
-        for _ in range(max_iters):
-            # Calculate the mask for every point in Z
-            mask = np.abs(Z) <= 2
-            # Calculate the new Z values
-            Z[mask] = Z[mask] ** 2 + C[mask]
-            # Update M for points that are still within the escape radius
-            M[mask] += 1
-        return M
-
     width = np.linspace(x_set[0], x_set[1], win_size)
     height = np.linspace(y_set[0], y_set[1], win_size)
     X, Y = np.meshgrid(width, height)
@@ -159,7 +158,7 @@ def w2_main(
     Z = np.zeros_like(C, dtype=complex)
     M = np.zeros_like(C, dtype=int)
     # Compute the Mandelbrot set using the function f
-    mandelbrot_set = f(C, Z, M, max_iters)
+    mandelbrot_set = timing(w2_f)(C, Z, M, max_iters)
     return mandelbrot_set
 
 
@@ -824,7 +823,7 @@ def w7_testing(
     for chunk in testing_chunks:
         times = []
         for _ in range(n_runs):
-            timing, results = mandelbrot_dask_worker(
+            timing, _ = mandelbrot_dask_worker(
                 win_size,
                 x_set[0],
                 x_set[1],

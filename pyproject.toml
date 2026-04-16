@@ -8,7 +8,17 @@ dependencies = []
 
 [dependency-groups]
 dev = [
+    "pytest>=8.4.0",
     "ty>=0.0.31",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["uni_tests"]
+python_files = ["test_*.py"]
+markers = [
+    "integration: exercises multiprocessing or local Dask end-to-end paths",
+    "performance: relative performance regression checks and benchmark smoke tests",
+]
+
 [tool.ty.environment]
 python = "~/miniforge3/envs/conda_venv/bin/python/"
