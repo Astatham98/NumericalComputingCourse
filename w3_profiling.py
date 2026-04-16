@@ -1,7 +1,7 @@
 import cProfile, pstats
 from main import w1_main, w2_main, w3_main
 
-def profiling(profile_string='w1_main(1024)', output_string='w1'):
+def profiling(profile_string: str = 'w1_main(1024)', output_string: str = 'w1') -> None:
     """Profiles a given function and outputs .prof files for all and cumultive stats
 
     Args:
