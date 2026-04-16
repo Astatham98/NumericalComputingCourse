@@ -5,7 +5,10 @@ import numpy.typing as npt
 from dask.distributed import Client, LocalCluster
 from multiprocessing_helpers import estimate_pi_chunk, timing, compute_mandelbrot_chunk
 
-def monte_carlo_chunk(total: int = 1_000_000, chunksize: int = 8) -> tuple[float, float]:
+
+def monte_carlo_chunk(
+    total: int = 1_000_000, chunksize: int = 8
+) -> tuple[float, float]:
     """
     Estimate pi serially by splitting work into equal Monte Carlo chunks.
 
@@ -18,10 +21,13 @@ def monte_carlo_chunk(total: int = 1_000_000, chunksize: int = 8) -> tuple[float
     """
     samples = total // chunksize
     t0 = time.perf_counter()
-    results =  [estimate_pi_chunk(samples) for _ in range(chunksize)]
+    results = [estimate_pi_chunk(samples) for _ in range(chunksize)]
     t1 = time.perf_counter()
-    print(f'Execution for serial took: {t1 - t0:.6f} seconds with total: {4*sum(results)/total}')
+    print(
+        f"Execution for serial took: {t1 - t0:.6f} seconds with total: {4 * sum(results) / total}"
+    )
     return t1 - t0, 4 * sum(results) / total
+
 
 def monte_carlo_dask(total: int = 1_000_000, chunksize: int = 8) -> tuple[float, float]:
     """
@@ -35,15 +41,19 @@ def monte_carlo_dask(total: int = 1_000_000, chunksize: int = 8) -> tuple[float,
         tuple[float, float]: Execution time and pi estimate.
     """
     samples = total // chunksize
-    task = [delayed(estimate_pi_chunk)(samples) for _ in range(chunksize)]    
+    task = [delayed(estimate_pi_chunk)(samples) for _ in range(chunksize)]
     t0 = time.perf_counter()
     results = dask.compute(*task)
     t1 = time.perf_counter()
-    print(f'Execution  for dask took: {t1 - t0:.6f} seconds with total: {4*sum(results)/total}')
+    print(
+        f"Execution  for dask took: {t1 - t0:.6f} seconds with total: {4 * sum(results) / total}"
+    )
     return t1 - t0, 4 * sum(results) / total
 
 
-def load_dask_client_local(workers: int = 4, threads_per_worker: int = 1) -> tuple[Client, LocalCluster]:
+def load_dask_client_local(
+    workers: int = 4, threads_per_worker: int = 1
+) -> tuple[Client, LocalCluster]:
     """
     Create a local Dask cluster and client.
 
@@ -59,6 +69,7 @@ def load_dask_client_local(workers: int = 4, threads_per_worker: int = 1) -> tup
     print(f"Dashboard: {client.dashboard_link}")
     return client, cluster
 
+
 def load_dask_client(ip: str) -> Client:
     """
     Connect to an existing Dask scheduler by IP.
@@ -71,6 +82,7 @@ def load_dask_client(ip: str) -> Client:
     """
     client = Client(f"tcp://{ip}:8786")
     return client
+
 
 def monte_carlo_dask_client(
     total: int = 1_000_000,
@@ -92,11 +104,13 @@ def monte_carlo_dask_client(
     """
     client, cluster = load_dask_client_local(workers, threads_per_worker)
     samples = total // chunksize
-    task = [delayed(estimate_pi_chunk)(samples) for _ in range(chunksize)]    
+    task = [delayed(estimate_pi_chunk)(samples) for _ in range(chunksize)]
     t0 = time.perf_counter()
     results = dask.compute(*task)
     t1 = time.perf_counter()
-    print(f'Execution  for dask took: {t1 - t0:.6f} seconds with total: {4*sum(results)/total}')
+    print(
+        f"Execution  for dask took: {t1 - t0:.6f} seconds with total: {4 * sum(results) / total}"
+    )
 
     client.close()
     cluster.close()
@@ -132,14 +146,18 @@ def mandelbrot_dask_worker(
     tasks, row = [], 0
     while row < N:
         row_end = min(row + chunk_size, N)
-        tasks.append(delayed(compute_mandelbrot_chunk)(
-            row, row_end, N, x_min, x_max, y_min, y_max, max_iter))
+        tasks.append(
+            delayed(compute_mandelbrot_chunk)(
+                row, row_end, N, x_min, x_max, y_min, y_max, max_iter
+            )
+        )
         row = row_end
     t0 = time.perf_counter()
     parts = dask.compute(*tasks)
     results = np.vstack(parts)
-    timing = time.perf_counter() - t0
-    return timing, results
+    t = time.perf_counter() - t0
+    return t, results
+
 
 if __name__ == "__main__":
     # total = 1_000_000_000
@@ -154,14 +172,17 @@ if __name__ == "__main__":
     N, max_iter = 1024, 100
     X_MIN, X_MAX, Y_MIN, Y_MAX = -2.5, 1.0, -1.25, 1.25
     client, cluster = load_dask_client_local(8, 1)
-    client.run(lambda: compute_mandelbrot_chunk(0, 8, 8, X_MIN, X_MAX, Y_MIN, Y_MAX, 10))
+    client.run(
+        lambda: compute_mandelbrot_chunk(0, 8, 8, X_MIN, X_MAX, Y_MIN, Y_MAX, 10)
+    )
 
     times = []
     for _ in range(3):
-        timing, results = mandelbrot_dask_worker(N, X_MIN, X_MAX, Y_MIN, Y_MAX, max_iter)
+        timing, results = mandelbrot_dask_worker(
+            N, X_MIN, X_MAX, Y_MIN, Y_MAX, max_iter
+        )
         times.append(timing)
-    print(f'median time for dask worker: {np.median(times)}')
+    print(f"median time for dask worker: {np.median(times)}")
 
     client.close()
     cluster.close()
-   

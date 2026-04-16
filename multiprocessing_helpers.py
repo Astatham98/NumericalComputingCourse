@@ -1,20 +1,25 @@
 import random
 import time
 from multiprocessing import Pool
+from multiprocessing.pool import Pool as PoolType
 from typing import Any, Callable
 from numba import njit
 import numpy as np
 import numpy.typing as npt
 
+
 def timing(func: Callable[..., Any]) -> Callable[..., Any]:
     """Decorator to measure the execution time of a function."""
+
     def wrapper(*args, **kwargs):
         start_time = time.perf_counter()
         result = func(*args, **kwargs)
         end_time = time.perf_counter()
         print(f"Execution took: {end_time - start_time:.6f} seconds")
         return result
+
     return wrapper
+
 
 @timing
 def estimate_pi_circle(num_samples: int = 100) -> float:
@@ -30,9 +35,10 @@ def estimate_pi_circle(num_samples: int = 100) -> float:
     inside_circle = 0
     for _ in range(num_samples):
         x, y = random.random(), random.random()
-        if x*x + y*y <= 1:
+        if x * x + y * y <= 1:
             inside_circle += 1
     return 4 * inside_circle / num_samples
+
 
 def estimate_pi_chunk(num_samples: int) -> int:
     """
@@ -47,9 +53,10 @@ def estimate_pi_chunk(num_samples: int) -> int:
     inside_circle = 0
     for _ in range(num_samples):
         x, y = random.random(), random.random()
-        if x*x + y*y <= 1:
+        if x * x + y * y <= 1:
             inside_circle += 1
     return inside_circle
+
 
 def estimate_pi_parallel(num_samples: int, num_processes: int = 4) -> float:
     """
@@ -68,7 +75,10 @@ def estimate_pi_parallel(num_samples: int, num_processes: int = 4) -> float:
         results = pool.map(estimate_pi_chunk, tasks)
     return 4 * sum(results) / num_samples
 
-def test_granulaity(total_work: int, chunk_size: int, num_processes: int) -> tuple[float, float]:
+
+def test_granulaity(
+    total_work: int, chunk_size: int, num_processes: int
+) -> tuple[float, float]:
     """
     Benchmark Monte Carlo pi computation for a given chunk granularity.
 
@@ -91,6 +101,7 @@ def test_granulaity(total_work: int, chunk_size: int, num_processes: int) -> tup
     t1 = time.perf_counter()
     return t1 - t0, 4 * sum(results) / total_work
 
+
 def subtract_seven(n: int) -> int:
     """
     Subtract seven from a numeric value.
@@ -102,6 +113,7 @@ def subtract_seven(n: int) -> int:
         Numeric value equal to ``n - 7``.
     """
     return n - 7
+
 
 def MFR(N: int = 1_000_000, ran_range: list[int] = [10, 100]) -> tuple[int, float]:
     """
@@ -120,7 +132,10 @@ def MFR(N: int = 1_000_000, ran_range: list[int] = [10, 100]) -> tuple[int, floa
     odds = filter(lambda n: n % 2 == 1, nums)
     return sum(odds), time.perf_counter() - t0
 
-def MPF(N: int = 1_000_000, ran_range: list[int] = [10, 100], num_processes: int = 4) -> tuple[int, float]:
+
+def MPF(
+    N: int = 1_000_000, ran_range: list[int] = [10, 100], num_processes: int = 4
+) -> tuple[int, float]:
     """
     Apply map/filter workflow with multiprocessing for the map step.
 
@@ -138,7 +153,7 @@ def MPF(N: int = 1_000_000, ran_range: list[int] = [10, 100], num_processes: int
         nums = pool.map(subtract_seven, rands)
     odds = filter(lambda n: n % 2 == 1, nums)
     return sum(odds), time.perf_counter() - t0
-    
+
 
 @njit(cache=True)
 def mandelbrot_pixel(c_real: float, c_imag: float, max_iter: int) -> int:
@@ -155,12 +170,13 @@ def mandelbrot_pixel(c_real: float, c_imag: float, max_iter: int) -> int:
     """
     z_real = z_imag = 0.0
     for i in range(max_iter):
-        z_sq = z_real*z_real + z_imag*z_imag
-        if z_sq > 4.0: 
+        z_sq = z_real * z_real + z_imag * z_imag
+        if z_sq > 4.0:
             return i
-        z_imag = 2.0*z_real*z_imag + c_imag
-        z_real = z_real*z_real - z_imag*z_imag + c_real
+        z_imag = 2.0 * z_real * z_imag + c_imag
+        z_real = z_real * z_real - z_imag * z_imag + c_real
     return max_iter
+
 
 @njit(cache=True)
 def compute_mandelbrot_chunk(
@@ -199,6 +215,7 @@ def compute_mandelbrot_chunk(
             result[row, col] = mandelbrot_pixel(c_real, c_imag, max_iterations)
     return result
 
+
 def mandelbrot_serial(
     N: int,
     x_min: float,
@@ -223,7 +240,10 @@ def mandelbrot_serial(
     """
     return compute_mandelbrot_chunk(0, N, N, x_min, x_max, y_min, y_max, max_iter)
 
-def _worker(args: tuple[int, int, int, float, float, float, float, int]) -> npt.NDArray[np.int32]:
+
+def _worker(
+    args: tuple[int, int, int, float, float, float, float, int],
+) -> npt.NDArray[np.int32]:
     """
     Unpack argument tuples for multiprocessing chunk workers.
 
@@ -235,10 +255,11 @@ def _worker(args: tuple[int, int, int, float, float, float, float, int]) -> npt.
     """
     return compute_mandelbrot_chunk(*args)
 
+
 def get_pool(
     n_processes: int,
     grid: list[tuple[int, int, int, float, float, float, float, int]],
-) -> Pool:
+) -> PoolType:
     """
     Get a multiprocessing pool from the given grid of arguments.
 
@@ -252,6 +273,7 @@ def get_pool(
     pool = Pool(processes=n_processes)
     pool.map(_worker, grid)
     return pool
+
 
 def mandelbrot_parallel(
     N: int,
@@ -299,6 +321,7 @@ def mandelbrot_parallel(
             times.append(end_time - start_time)
     return total, times
 
+
 def mandelbrot_parallel_chunks(
     N: int,
     x_min: float,
@@ -308,7 +331,7 @@ def mandelbrot_parallel_chunks(
     max_iter: int = 100,
     n_workers: int = 4,
     n_chunks: int | None = None,
-    pool: Pool | None = None,
+    pool: PoolType | None = None,
 ) -> tuple[npt.NDArray[np.int32], float]:
     """
     Compute the Mandelbrot set with configurable worker/chunk scheduling.
@@ -335,19 +358,20 @@ def mandelbrot_parallel_chunks(
         row_end = min(row + chunk_size, N)
         chunks.append((row, row_end, N, x_min, x_max, y_min, y_max, max_iter))
         row = row_end
-    if pool is not None: # caller manages Pool; skip startup + warm-up
+    if pool is not None:  # caller manages Pool; skip startup + warm-up
         t0 = time.perf_counter()
         res = np.vstack(pool.map(_worker, chunks))
         end_time = time.perf_counter() - t0
         return res, end_time
     tiny = [(0, 8, 8, x_min, x_max, y_min, y_max, max_iter)]
     with Pool(processes=n_workers) as p:
-        p.map(_worker, tiny) # warm-up: load JIT cache in workers
+        p.map(_worker, tiny)  # warm-up: load JIT cache in workers
         t0 = time.perf_counter()
         parts = p.map(_worker, chunks)
     res = np.vstack(parts)
     end_time = time.perf_counter() - t0
     return res, end_time
+
 
 def plot_medians(median_vals: list[float], cores: list[int]) -> None:
     """
@@ -358,12 +382,14 @@ def plot_medians(median_vals: list[float], cores: list[int]) -> None:
         cores (list[int]): Corresponding number of cores.
     """
     from matplotlib import pyplot as plt
+
     plt.figure(figsize=(10, 6))
-    plt.plot(cores, median_vals, marker='o')
-    plt.title('Median Execution Time vs Number of Cores')
-    plt.xlabel('Number of Cores')
-    plt.ylabel('Median Execution Time (seconds)')
+    plt.plot(cores, median_vals, marker="o")
+    plt.title("Median Execution Time vs Number of Cores")
+    plt.xlabel("Number of Cores")
+    plt.ylabel("Median Execution Time (seconds)")
     plt.show()
-    
+
+
 if __name__ == "__main__":
     pass
