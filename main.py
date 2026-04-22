@@ -21,6 +21,7 @@ from distributed_helpers import (
     load_dask_client_local,
     load_dask_client,
 )
+from gpu_helpers import gpu_mandelbrot
 
 """
 Mandelbrot Set Generator
@@ -146,8 +147,8 @@ def w2_main(
         np.ndarray: Mandelbrot set values in a 2D array.
     """
 
-    width = np.linspace(x_set[0], x_set[1], win_size)
-    height = np.linspace(y_set[0], y_set[1], win_size)
+    width = np.linspace(x_set[0], x_set[1], win_size, dtype=np.float32)
+    height = np.linspace(y_set[0], y_set[1], win_size, dtype=np.float32)
     X, Y = np.meshgrid(width, height)
     C = X + 1j * Y
 
@@ -155,8 +156,8 @@ def w2_main(
     mandelbrot_set = np.zeros(C.shape, dtype=C.dtype)
 
     # Initialize Z and M arrays
-    Z = np.zeros_like(C, dtype=complex)
-    M = np.zeros_like(C, dtype=int)
+    Z = np.zeros_like(C, dtype=np.complex64)
+    M = np.zeros_like(C, dtype=np.int32)
     # Compute the Mandelbrot set using the function f
     mandelbrot_set = timing(w2_f)(C, Z, M, max_iters)
     return mandelbrot_set
@@ -955,7 +956,17 @@ def benchmark_all(n_runs: int = 3, size: int = 1024) -> dict[str, float]:
     }
     return benhmark_dict
 
-
+def w10_main(max_iters: int = 100,
+        x_set: Tuple[float, float] = (-2.0, 1.0),  # Changed to tuple + floats
+        y_set: Tuple[float, float] = (-1.5, 1.5),  # Changed to tuple + floats
+        win_size: int = 1024,
+        n_runs: int = 3) -> np.ndarray:
+        medians = []
+        for _ in range(n_runs):
+            m, t = gpu_mandelbrot(win_size=win_size, x_set=x_set, y_set=y_set, max_iters=max_iters)
+            medians.append(t)
+        return np.median(medians), m, np.var(medians)
+            
 def bennchmark_parallel(n_runs: int = 3, size: int = 4096) -> dict[str, float]:
     """
     Benchmark only the parallel/distributed implementations (week 4-6).
@@ -1074,7 +1085,12 @@ if __name__ == "__main__":
     # elephant = w_1_5_main(max_iters=500, x_set=(0.175, 0.375), y_set=(-0.1, 0.1), win_size=1024)
     # deep_seahorse = w_1_5_main(max_iters=2000, x_set=(-0.7487667139, -0.7487667078), y_set=(0.1236408449, 0.1236408510), win_size=1024)
 
-    w7_main(win_size=4096, ip="10.92.0.203")
+    mw2 = w3_main(win_size=1024, x_set=(-2.0, 1.0), y_set=(-1.5, 1.5), max_iters=100, dtype=np.float32)
+    m_gpu, _ = gpu_mandelbrot(win_size=1024, x_set=(-2.0, 1.0), y_set=(-1.5, 1.5), max_iters=100)
+    diff = np.abs(mw2 - m_gpu)
+    print(f"Max difference between GPU and numpy implementations: {diff.max()}")
+    
+
 
     # mandelbrot_set, medians = w4_main(win_size=1024)
     # from multiprocessing_helpers import plot_medians
