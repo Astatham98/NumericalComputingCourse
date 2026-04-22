@@ -21,7 +21,7 @@ from distributed_helpers import (
     load_dask_client_local,
     load_dask_client,
 )
-from gpu_helpers import gpu_mandelbrot
+from gpu_helpers import gpu_mandelbrot_f64, gpu_mandelbrot
 
 """
 Mandelbrot Set Generator
@@ -936,6 +936,19 @@ def benchmark_all(n_runs: int = 3, size: int = 1024) -> dict[str, float]:
     )
     print(f"Median time for w6: {median_w6}, \nw6 variance {var_w6}")
 
+    print("Week 10: GPU with OPENcl (f32)")
+    median_w10, mandelbrot_set_w10, var_w10 = w10_main(
+        100, (-2.0, 1.0), (-1.5, 1.5), size, n_runs=n_runs
+    )
+    print(f"Median time for w10: {median_w10}, \nw10 variance {var_w10}")
+    print("Week 10: GPU with OPENcl (f64)")
+    median_w10_f64, mandelbrot_set_w10_f64, var_w10_f64 = w10_main(
+        100, (-2.0, 1.0), (-1.5, 1.5), size, n_runs=n_runs, use_f64=True
+    )
+    print(
+        f"Median time for w10 (f64): {median_w10_f64}, \nw10 variance (f64) {var_w10_f64}"
+    )
+
     benhmark_dict = {
         "w1_median": median_w1,
         "w2_median": median_w2,
@@ -944,6 +957,8 @@ def benchmark_all(n_runs: int = 3, size: int = 1024) -> dict[str, float]:
         "w4_median": median_w4,
         "w5_median": median_w5,
         "w6_median": median_w6,
+        "w10_median": median_w10,
+        "w10_f64_median": median_w10_f64,
         "w1_variance": var_w1,
         "w2_variance": var_w2,
         "w1_5_variance": var_w1_5,
@@ -953,20 +968,34 @@ def benchmark_all(n_runs: int = 3, size: int = 1024) -> dict[str, float]:
         "w6_variance": var_w6,
         "w5_LIF": w5_LIF,
         "w6_LIF": w6_LIF,
+        "w10_variance": var_w10,
+        "w10_f64_variance": var_w10_f64,
     }
     return benhmark_dict
 
-def w10_main(max_iters: int = 100,
-        x_set: Tuple[float, float] = (-2.0, 1.0),  # Changed to tuple + floats
-        y_set: Tuple[float, float] = (-1.5, 1.5),  # Changed to tuple + floats
-        win_size: int = 1024,
-        n_runs: int = 3) -> np.ndarray:
-        medians = []
-        for _ in range(n_runs):
-            m, t = gpu_mandelbrot(win_size=win_size, x_set=x_set, y_set=y_set, max_iters=max_iters)
-            medians.append(t)
-        return np.median(medians), m, np.var(medians)
-            
+
+def w10_main(
+    max_iters: int = 100,
+    x_set: Tuple[float, float] = (-2.0, 1.0),  # Changed to tuple + floats
+    y_set: Tuple[float, float] = (-1.5, 1.5),  # Changed to tuple + floats
+    win_size: int = 1024,
+    n_runs: int = 3,
+    use_f64: bool = False,
+) -> np.ndarray:
+    medians = []
+    for _ in range(n_runs):
+        if use_f64:
+            m, t = gpu_mandelbrot_f64(
+                win_size=win_size, x_set=x_set, y_set=y_set, max_iters=max_iters
+            )
+        else:
+            m, t = gpu_mandelbrot(
+                win_size=win_size, x_set=x_set, y_set=y_set, max_iters=max_iters
+            )
+        medians.append(t)
+    return np.median(medians), m, np.var(medians)
+
+
 def bennchmark_parallel(n_runs: int = 3, size: int = 4096) -> dict[str, float]:
     """
     Benchmark only the parallel/distributed implementations (week 4-6).
@@ -1085,12 +1114,18 @@ if __name__ == "__main__":
     # elephant = w_1_5_main(max_iters=500, x_set=(0.175, 0.375), y_set=(-0.1, 0.1), win_size=1024)
     # deep_seahorse = w_1_5_main(max_iters=2000, x_set=(-0.7487667139, -0.7487667078), y_set=(0.1236408449, 0.1236408510), win_size=1024)
 
-    mw2 = w3_main(win_size=1024, x_set=(-2.0, 1.0), y_set=(-1.5, 1.5), max_iters=100, dtype=np.float32)
-    m_gpu, _ = gpu_mandelbrot(win_size=1024, x_set=(-2.0, 1.0), y_set=(-1.5, 1.5), max_iters=100)
+    mw2 = w3_main(
+        win_size=1024,
+        x_set=(-2.0, 1.0),
+        y_set=(-1.5, 1.5),
+        max_iters=100,
+        dtype=np.float32,
+    )
+    m_gpu, _ = gpu_mandelbrot(
+        win_size=1024, x_set=(-2.0, 1.0), y_set=(-1.5, 1.5), max_iters=100
+    )
     diff = np.abs(mw2 - m_gpu)
     print(f"Max difference between GPU and numpy implementations: {diff.max()}")
-    
-
 
     # mandelbrot_set, medians = w4_main(win_size=1024)
     # from multiprocessing_helpers import plot_medians

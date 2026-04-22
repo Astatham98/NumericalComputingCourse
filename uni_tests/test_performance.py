@@ -7,7 +7,16 @@ from typing import Any, Callable
 import numpy as np
 import pytest
 
-from main import get_mandelbrot_serial_time, w1_main, w2_main, w3_main, w4_main, w5_main, w6_main, w_1_5_main
+from main import (
+    get_mandelbrot_serial_time,
+    w1_main,
+    w2_main,
+    w3_main,
+    w4_main,
+    w5_main,
+    w6_main,
+    w_1_5_main,
+)
 from uni_tests.conftest import DEFAULT_X_SET, DEFAULT_Y_SET
 
 
@@ -17,7 +26,9 @@ BENCHMARK_RUNS = 7
 BENCHMARK_SMOKE_GRID_SIZE = 64
 
 
-def timed_call(func: Callable[..., Any], *args: Any, **kwargs: Any) -> tuple[float, Any]:
+def timed_call(
+    func: Callable[..., Any], *args: Any, **kwargs: Any
+) -> tuple[float, Any]:
     sink = io.StringIO()
     with redirect_stdout(sink), redirect_stderr(sink):
         start = time.perf_counter()

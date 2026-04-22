@@ -2,6 +2,8 @@ import time
 from matplotlib import pyplot as plt
 import pyopencl as cl
 import numpy as np
+
+
 def vector_addition(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     """
     Add two vectors element-wise using PyOpenCL.
@@ -20,19 +22,22 @@ def vector_addition(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     }
     """
 
-    ctx   = cl.create_some_context(interactive=False)
+    ctx = cl.create_some_context(interactive=False)
     queue = cl.CommandQueue(ctx)
-    prog  = cl.Program(ctx, KERNEL_SRC).build()
-
+    prog = cl.Program(ctx, KERNEL_SRC).build()
 
     a = np.array(a, dtype=np.float32)
     b = np.array(b, dtype=np.float32)
     assert a.size == b.size, "Input arrays must have the same size"
     N = a.size
     res = np.empty_like(a)
-    
-    a_dev = cl.Buffer(ctx, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf=a)
-    b_dev = cl.Buffer(ctx, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf=b)
+
+    a_dev = cl.Buffer(
+        ctx, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf=a
+    )
+    b_dev = cl.Buffer(
+        ctx, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, hostbuf=b
+    )
     res_g = cl.Buffer(ctx, cl.mem_flags.WRITE_ONLY, res.nbytes)
 
     # Pass the queue, shape, work group size, the output buffer to the kernel
@@ -41,17 +46,18 @@ def vector_addition(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     cl.enqueue_copy(queue, res, res_g)
     queue.finish()
 
-    print(res)     # → [ 0  1  4  9 16 25 36 49]
+    print(res)  # → [ 0  1  4  9 16 25 36 49]
     assert np.allclose(res, a + b)
     return res
 
+
 def gpu_mandelbrot(
     max_iters: int = 100,
-    x_set: tuple = (-2.0, 1.0),  
-    y_set: tuple = (-1.5, 1.5),  
+    x_set: tuple = (-2.0, 1.0),
+    y_set: tuple = (-1.5, 1.5),
     win_size: int = 1024,
-    )-> np.ndarray:
-    
+) -> np.ndarray:
+
     KERNEL_SRC = """
     __kernel void mandelbrot(
     __global int *result,
@@ -79,30 +85,42 @@ def gpu_mandelbrot(
 
     x_min, x_max = x_set
     y_min, y_max = y_set
-    ctx   = cl.create_some_context(interactive=False)
+    ctx = cl.create_some_context(interactive=False)
     queue = cl.CommandQueue(ctx)
-    prog  = cl.Program(ctx, KERNEL_SRC).build()
+    prog = cl.Program(ctx, KERNEL_SRC).build()
 
     result = np.zeros((win_size, win_size), dtype=np.int32)
     result_g = cl.Buffer(ctx, cl.mem_flags.WRITE_ONLY, result.nbytes)
 
-    #Warmup
-    prog.mandelbrot(queue, (64, 64), None, result_g,
-                np.float32(x_min), np.float32(x_max),
-                np.float32(y_min), np.float32(y_max),
-                np.int32(max_iters), np.int32(64))
+    # Warmup
+    prog.mandelbrot(
+        queue,
+        (64, 64),
+        None,
+        result_g,
+        np.float32(x_min),
+        np.float32(x_max),
+        np.float32(y_min),
+        np.float32(y_max),
+        np.int32(max_iters),
+        np.int32(64),
+    )
     queue.finish()
 
-
-    #Actual run
+    # Actual run
     t0 = time.perf_counter()
-    prog.mandelbrot(queue, (win_size, win_size), None, result_g, 
-                    np.float32(x_min), 
-                    np.float32(x_max), 
-                    np.float32(y_min), 
-                    np.float32(y_max), 
-                    np.int32(max_iters), 
-                    np.int32(win_size))
+    prog.mandelbrot(
+        queue,
+        (win_size, win_size),
+        None,
+        result_g,
+        np.float32(x_min),
+        np.float32(x_max),
+        np.float32(y_min),
+        np.float32(y_max),
+        np.int32(max_iters),
+        np.int32(win_size),
+    )
     queue.finish()
     elapsed = time.perf_counter() - t0
     print(f"GPU Mandelbrot computed in {elapsed:.4f} seconds")
@@ -112,41 +130,54 @@ def gpu_mandelbrot(
 
     return result, elapsed
 
+
 def gpu_mandelbrot_f64(
     max_iters: int = 100,
-    x_set: tuple = (-2.0, 1.0),  
-    y_set: tuple = (-1.5, 1.5),  
+    x_set: tuple = (-2.0, 1.0),
+    y_set: tuple = (-1.5, 1.5),
     win_size: int = 1024,
-    )-> np.ndarray:
-    
+) -> np.ndarray:
+
     KERNEL_SRC = get_f64_mandelbrot_kernel()
 
     x_min, x_max = x_set
     y_min, y_max = y_set
-    ctx   = cl.create_some_context(interactive=False)
+    ctx = cl.create_some_context(interactive=False)
     queue = cl.CommandQueue(ctx)
-    prog  = cl.Program(ctx, KERNEL_SRC).build()
+    prog = cl.Program(ctx, KERNEL_SRC).build()
 
     result = np.zeros((win_size, win_size), dtype=np.int32)
     result_g = cl.Buffer(ctx, cl.mem_flags.WRITE_ONLY, result.nbytes)
 
-    #Warmup
-    prog.mandelbrot_f64(queue, (64, 64), None, result_g,
-                np.float64(x_min), np.float64(x_max),
-                np.float64(y_min), np.float64(y_max),
-                np.int32(max_iters), np.int32(64))
+    # Warmup
+    prog.mandelbrot_f64(
+        queue,
+        (64, 64),
+        None,
+        result_g,
+        np.float64(x_min),
+        np.float64(x_max),
+        np.float64(y_min),
+        np.float64(y_max),
+        np.int32(max_iters),
+        np.int32(64),
+    )
     queue.finish()
 
-
-    #Actual run
+    # Actual run
     t0 = time.perf_counter()
-    prog.mandelbrot_f64(queue, (win_size, win_size), None, result_g, 
-                    np.float64(x_min), 
-                    np.float64(x_max), 
-                    np.float64(y_min), 
-                    np.float64(y_max), 
-                    np.int32(max_iters), 
-                    np.int32(win_size))
+    prog.mandelbrot_f64(
+        queue,
+        (win_size, win_size),
+        None,
+        result_g,
+        np.float64(x_min),
+        np.float64(x_max),
+        np.float64(y_min),
+        np.float64(y_max),
+        np.int32(max_iters),
+        np.int32(win_size),
+    )
     queue.finish()
     elapsed = time.perf_counter() - t0
     print(f"GPU Mandelbrot computed in {elapsed:.4f} seconds")
@@ -155,9 +186,6 @@ def gpu_mandelbrot_f64(
     queue.finish()
 
     return result, elapsed
-
-
-
 
 
 def get_f64_mandelbrot_kernel() -> str:
@@ -186,7 +214,8 @@ def get_f64_mandelbrot_kernel() -> str:
     }
     """
 
+
 if __name__ == "__main__":
-   m, t = gpu_mandelbrot_f64(win_size=4096)
-   plt.imshow(m, cmap="twilight_shifted_r")
-   plt.show()
+    m, t = gpu_mandelbrot_f64(win_size=4096)
+    plt.imshow(m, cmap="twilight_shifted_r")
+    plt.show()

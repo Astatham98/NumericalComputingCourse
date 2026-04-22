@@ -34,7 +34,9 @@ def test_mandelbrot_pixel_matches_python_reference(
 
 
 @pytest.mark.parametrize("row_bounds", [(0, 2), (2, 5)])
-def test_compute_mandelbrot_chunk_matches_serial_rows(row_bounds: tuple[int, int]) -> None:
+def test_compute_mandelbrot_chunk_matches_serial_rows(
+    row_bounds: tuple[int, int],
+) -> None:
     start_row, end_row = row_bounds
     expected = mandelbrot_serial(
         5,
@@ -58,7 +60,16 @@ def test_compute_mandelbrot_chunk_matches_serial_rows(row_bounds: tuple[int, int
 
 
 def test_worker_unpacks_compute_chunk_arguments() -> None:
-    args = (1, 4, 5, DEFAULT_X_SET[0], DEFAULT_X_SET[1], DEFAULT_Y_SET[0], DEFAULT_Y_SET[1], 20)
+    args = (
+        1,
+        4,
+        5,
+        DEFAULT_X_SET[0],
+        DEFAULT_X_SET[1],
+        DEFAULT_Y_SET[0],
+        DEFAULT_Y_SET[1],
+        20,
+    )
     assert_array_equal(_worker(args), compute_mandelbrot_chunk(*args))
 
 
@@ -110,7 +121,9 @@ def test_mandelbrot_parallel_chunks_matches_serial_small_grid() -> None:
     assert_array_equal(result, expected)
 
 
-def test_w4_main_returns_summary_from_parallel_helper(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_w4_main_returns_summary_from_parallel_helper(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     expected = np.arange(9, dtype=np.int32).reshape(3, 3)
     recorded = {}
 
@@ -124,7 +137,16 @@ def test_w4_main_returns_summary_from_parallel_helper(monkeypatch: pytest.Monkey
         no_cores: int,
         n_runs: int,
     ):
-        recorded["args"] = (win_size, x_min, x_max, y_min, y_max, max_iters, no_cores, n_runs)
+        recorded["args"] = (
+            win_size,
+            x_min,
+            x_max,
+            y_min,
+            y_max,
+            max_iters,
+            no_cores,
+            n_runs,
+        )
         return expected, [0.3, 0.1, 0.2]
 
     monkeypatch.setattr("main.mandelbrot_parallel", fake_parallel)

@@ -99,7 +99,9 @@ def test_w3_f_matches_python_and_compiled_versions(
     python_version = w3_f.__wrapped__.py_func(
         grid.copy(), np.zeros(grid.shape, dtype=np.int32), max_iters
     )
-    compiled_version = w3_f(grid.copy(), np.zeros(grid.shape, dtype=np.int32), max_iters)
+    compiled_version = w3_f(
+        grid.copy(), np.zeros(grid.shape, dtype=np.int32), max_iters
+    )
     assert_array_equal(python_version, expected)
     assert_array_equal(compiled_version, expected)
 
@@ -158,7 +160,9 @@ def test_w1_main_matches_shifted_reference() -> None:
     assert_array_equal(actual, expected)
 
 
-def test_benchmark_returns_last_result_and_statistics(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_benchmark_returns_last_result_and_statistics(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     perf_values = iter([0.0, 0.2, 1.0, 1.3, 2.0, 2.5])
 
     def fake_perf_counter() -> float:

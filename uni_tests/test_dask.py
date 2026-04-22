@@ -61,7 +61,9 @@ def test_local_dask_submit_gather_matches_expected_chunk() -> None:
     assert_array_equal(gathered, expected)
 
 
-def test_w6_main_returns_summary_and_closes_client(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_w6_main_returns_summary_and_closes_client(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     expected = np.arange(9, dtype=np.int32).reshape(3, 3)
     call_log = {"runs": 0}
 
