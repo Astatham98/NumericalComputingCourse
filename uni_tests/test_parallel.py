@@ -3,7 +3,7 @@ import pytest
 from numpy.testing import assert_array_equal
 
 from main import w4_main, w5_main
-from multiprocessing_helpers import (
+from helper_funcs.multiprocessing_helpers import (
     _worker,
     compute_mandelbrot_chunk,
     mandelbrot_parallel,

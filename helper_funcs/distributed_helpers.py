@@ -3,7 +3,7 @@ from dask import delayed
 import numpy as np
 import numpy.typing as npt
 from dask.distributed import Client, LocalCluster
-from multiprocessing_helpers import estimate_pi_chunk, timing, compute_mandelbrot_chunk
+from helper_funcs.multiprocessing_helpers import estimate_pi_chunk, timing, compute_mandelbrot_chunk
 
 
 def monte_carlo_chunk(

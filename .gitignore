@@ -213,3 +213,4 @@ mprofile*
 *.lprof
 docs/
 .vscode/
+uv.lock

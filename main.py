@@ -9,19 +9,19 @@ from typing import Any, Callable, Tuple, List, Dict
 from multiprocessing import Pool
 import psutil
 import numpy.typing as npt
-from multiprocessing_helpers import (
+from helper_funcs.multiprocessing_helpers import (
     mandelbrot_serial,
     mandelbrot_parallel,
     mandelbrot_parallel_chunks,
     get_pool,
     compute_mandelbrot_chunk,
 )
-from distributed_helpers import (
+from helper_funcs.distributed_helpers import (
     mandelbrot_dask_worker,
     load_dask_client_local,
     load_dask_client,
 )
-from gpu_helpers import gpu_mandelbrot_f64, gpu_mandelbrot
+from helper_funcs.gpu_helpers import gpu_mandelbrot_f64, gpu_mandelbrot
 
 """
 Mandelbrot Set Generator
@@ -1074,7 +1074,7 @@ def w4_monte_carlo(NUM_RUNS: int = 10_000) -> None:
     Parameters:
     NUM_RUNS (int): Number of Monte Carlo simulations to run. Default is 10_000.
     """
-    from multiprocessing_helpers import estimate_pi_circle, estimate_pi_parallel
+    from helper_funcs.multiprocessing_helpers import estimate_pi_circle, estimate_pi_parallel
 
     benchmark(estimate_pi_circle, NUM_RUNS, n_runs=3)
     for i in range(psutil.cpu_count(logical=False)):
