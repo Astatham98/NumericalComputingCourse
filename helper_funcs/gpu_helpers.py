@@ -56,6 +56,7 @@ def gpu_mandelbrot(
     x_set: tuple = (-2.0, 1.0),
     y_set: tuple = (-1.5, 1.5),
     win_size: int = 1024,
+    gpu_devices: list[cl.Device] | None = None,
 ) -> np.ndarray:
 
     KERNEL_SRC = """
@@ -85,7 +86,7 @@ def gpu_mandelbrot(
 
     x_min, x_max = x_set
     y_min, y_max = y_set
-    ctx = cl.create_some_context(interactive=False)
+    ctx = cl.Context(devices=gpu_devices)
     queue = cl.CommandQueue(ctx)
     prog = cl.Program(ctx, KERNEL_SRC).build()
 
@@ -136,13 +137,14 @@ def gpu_mandelbrot_f64(
     x_set: tuple = (-2.0, 1.0),
     y_set: tuple = (-1.5, 1.5),
     win_size: int = 1024,
+    gpu_devices: list[cl.Device] | None = None,
 ) -> np.ndarray:
 
     KERNEL_SRC = get_f64_mandelbrot_kernel()
 
     x_min, x_max = x_set
     y_min, y_max = y_set
-    ctx = cl.create_some_context(interactive=False)
+    ctx = cl.Context(devices=gpu_devices)
     queue = cl.CommandQueue(ctx)
     prog = cl.Program(ctx, KERNEL_SRC).build()
 

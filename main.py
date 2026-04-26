@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import time
 from functools import wraps
 from numba import jit, njit, prange
+import pyopencl as cl
 
 # from line_profiler import profile
 from typing import Any, Callable, Tuple, List, Dict
@@ -945,11 +946,15 @@ def benchmark_all(n_runs: int = 3, size: int = 1024) -> dict[str, float]:
     print(f"Median time for w6: {median_w6}, \nw6 variance {var_w6}")
 
     print("Week 10: GPU with OPENcl (f32)")
+    
+    platforms = cl.get_platforms()
+    gpu_devices = platforms[0].get_devices(device_type=cl.device_type.GPU)
     median_w10, mandelbrot_set_w10, var_w10 = w10_main(
         100, (-2.0, 1.0), (-1.5, 1.5), size, n_runs=n_runs
     )
     print(f"Median time for w10: {median_w10}, \nw10 variance {var_w10}")
     print("Week 10: GPU with OPENcl (f64)")
+
     median_w10_f64, mandelbrot_set_w10_f64, var_w10_f64 = w10_main(
         100, (-2.0, 1.0), (-1.5, 1.5), size, n_runs=n_runs, use_f64=True
     )
@@ -992,15 +997,19 @@ def w10_main(
     n_runs: int = 3,
     use_f64: bool = False,
 ) -> Tuple[float, npt.NDArray[Any], float]:
+    
+    platforms = cl.get_platforms()
+    gpu_devices = platforms[0].get_devices(device_type=cl.device_type.GPU)
+
     medians = []
     for _ in range(n_runs):
         if use_f64:
             m, t = gpu_mandelbrot_f64(
-                win_size=win_size, x_set=x_set, y_set=y_set, max_iters=max_iters
+                win_size=win_size, x_set=x_set, y_set=y_set, max_iters=max_iters, gpu_devices=gpu_devices
             )
         else:
             m, t = gpu_mandelbrot(
-                win_size=win_size, x_set=x_set, y_set=y_set, max_iters=max_iters
+                win_size=win_size, x_set=x_set, y_set=y_set, max_iters=max_iters, gpu_devices=gpu_devices
             )
         medians.append(t)
     return np.median(medians), m, np.var(medians)
