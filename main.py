@@ -916,9 +916,8 @@ def benchmark_all(n_runs: int = 3, size: int = 1024) -> dict[str, float]:
         w_1_5_main, 100, (-2.0, 1.0), (-1.5, 1.5), size, n_runs=n_runs
     )
     print("Week 3: optimized numba")
-    median_w3, mandelbrot_set_w3, var_w3 = benchmark(
-        w3_main, 100, (-2.0, 1.0), (-1.5, 1.5), size, n_runs=n_runs
-    )
+    median_w3_f64, _, median_w3_f32, _, var_w3_f64, var_w3_f32 = benchmark_dtype(n_runs=n_runs)
+
     print("Week 4: parallel computing")
     # W4 main now uses its own timings and we do not want to time the workers in the benchmark
     median_w4, mandelbrot_set_w4, var_w4 = w4_main(
@@ -953,7 +952,8 @@ def benchmark_all(n_runs: int = 3, size: int = 1024) -> dict[str, float]:
         "w1_median": median_w1,
         "w2_median": median_w2,
         "w1_5_median": median_w1_5,
-        "w3_median": median_w3,
+        "w3_f32_median": median_w3_f32,
+        "w3_f64_median": median_w3_f64,
         "w4_median": median_w4,
         "w5_median": median_w5,
         "w6_median": median_w6,
@@ -962,7 +962,8 @@ def benchmark_all(n_runs: int = 3, size: int = 1024) -> dict[str, float]:
         "w1_variance": var_w1,
         "w2_variance": var_w2,
         "w1_5_variance": var_w1_5,
-        "w3_variance": var_w3,
+        "w3_f32_variance": var_w3_f32,
+        "w3_f64_variance": var_w3_f64,
         "w4_variance": var_w4,
         "w5_variance": var_w5,
         "w6_variance": var_w6,
@@ -1023,6 +1024,18 @@ def bennchmark_parallel(n_runs: int = 3, size: int = 4096) -> dict[str, float]:
         100, (-2.0, 1.0), (-1.5, 1.5), size, n_runs=n_runs, chunks=48
     )
     print(f"Median time for w6: {median_w6}, \nw6 variance {var_w6}")
+    print("Week 10: GPU with OPENcl (f32)")
+    median_w10, mandelbrot_set_w10, var_w10 = w10_main(
+        100, (-2.0, 1.0), (-1.5, 1.5), size, n_runs=n_runs
+    )
+    print(f"Median time for w10: {median_w10}, \nw10 variance {var_w10}")
+    print("Week 10: GPU with OPENcl (f64)")
+    median_w10_f64, mandelbrot_set_w10_f64, var_w10_f64 = w10_main(
+        100, (-2.0, 1.0), (-1.5, 1.5), size, n_runs=n_runs, use_f64=True
+    )
+    print(
+        f"Median time for w10 (f64): {median_w10_f64}, \nw10 variance (f64) {var_w10_f64}"
+    )
 
     benhmark_dict = {
         "w4_median": median_w4,
@@ -1033,12 +1046,20 @@ def bennchmark_parallel(n_runs: int = 3, size: int = 4096) -> dict[str, float]:
         "w6_variance": var_w6,
         "w5_LIF": w5_LIF,
         "w6_LIF": w6_LIF,
+        "w10_median": median_w10,
+        "w10_f64_median": median_w10_f64,
+        "w10_variance": var_w10,
+        "w10_f64_variance": var_w10_f64,
     }
     return benhmark_dict
 
 
 def benchmark_dtype(
     n_runs: int,
+    win_size: int = 1024,
+    n_iters: int = 100,
+    x_set: Tuple[float, float] = (-2.0, 1.0), 
+    y_set: Tuple[float, float] = (-1.5, 1.5), 
 ) -> tuple[float, npt.NDArray[Any], float, npt.NDArray[Any], float, float]:
     """
     Compare ``w3_main`` performance for float64 versus float32 inputs.
@@ -1050,10 +1071,10 @@ def benchmark_dtype(
         tuple: Timing, result arrays, and variance values for both dtypes.
     """
     median_w3_64, mandelbrot_set_w3_64, v64 = benchmark(
-        w3_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, np.float64, n_runs=n_runs
+        w3_main, n_iters, x_set, y_set, win_size, np.float64, n_runs=n_runs
     )
     median_w3_32, mandelbrot_set_w3_32, v32 = benchmark(
-        w3_main, 100, (-2.0, 1.0), (-1.5, 1.5), 1024, np.float32, n_runs=n_runs
+        w3_main, n_iters, x_set, y_set, win_size, np.float32, n_runs=n_runs
     )
 
     return (
@@ -1064,23 +1085,6 @@ def benchmark_dtype(
         v64,
         v32,
     )
-
-
-def w4_monte_carlo(NUM_RUNS: int = 10_000) -> None:
-    """
-    Run Monte Carlo simulations for estimation of pi using Circle and Parallel
-    implementations.
-
-    Parameters:
-    NUM_RUNS (int): Number of Monte Carlo simulations to run. Default is 10_000.
-    """
-    from helper_funcs.multiprocessing_helpers import estimate_pi_circle, estimate_pi_parallel
-
-    benchmark(estimate_pi_circle, NUM_RUNS, n_runs=3)
-    for i in range(psutil.cpu_count(logical=False)):
-        print(f"Running on {i + 1} cores")
-        benchmark(estimate_pi_parallel, NUM_RUNS, i + 1, n_runs=3)
-
 
 def benchmark_numba_imp(
     n_runs: int = 3,
@@ -1114,18 +1118,9 @@ if __name__ == "__main__":
     # elephant = w_1_5_main(max_iters=500, x_set=(0.175, 0.375), y_set=(-0.1, 0.1), win_size=1024)
     # deep_seahorse = w_1_5_main(max_iters=2000, x_set=(-0.7487667139, -0.7487667078), y_set=(0.1236408449, 0.1236408510), win_size=1024)
 
-    mw2 = w3_main(
-        win_size=1024,
-        x_set=(-2.0, 1.0),
-        y_set=(-1.5, 1.5),
-        max_iters=100,
-        dtype=np.float32,
+    median_w4, mandelbrot_set_w4, var_w4 = w4_main(
+        100, (-2.0, 1.0), (-1.5, 1.5), 1024, n_runs=3
     )
-    m_gpu, _ = gpu_mandelbrot(
-        win_size=1024, x_set=(-2.0, 1.0), y_set=(-1.5, 1.5), max_iters=100
-    )
-    diff = np.abs(mw2 - m_gpu)
-    print(f"Max difference between GPU and numpy implementations: {diff.max()}")
 
     # mandelbrot_set, medians = w4_main(win_size=1024)
     # from multiprocessing_helpers import plot_medians
