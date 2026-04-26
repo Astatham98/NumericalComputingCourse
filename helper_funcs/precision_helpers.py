@@ -150,7 +150,7 @@ def mandelbrot_divergence(
         active[newly] = False
     plt.imshow(
         diverge,
-        cmap="gist_earth",
+        cmap="twilight_shifted_r",
         origin="lower",
         extent=[-0.7530, -0.7490, 0.0990, 0.1030],
     )
@@ -201,6 +201,12 @@ def mandelbrot_sensitivity(
     n_perturb = escape_count(C + delta, max_iters).astype(float)
     dn = np.abs(n_base - n_perturb)
     kappa = np.where(n_base > 0, dn / (eps32 * n_base), np.nan)
+    print(
+        f"Max sensitivity (kappa) at index: {np.unravel_index(np.nanargmax(kappa), kappa.shape)}"
+    )
+    # Calculate max kappa
+    max_kappa = np.nanmax(kappa)
+    print(f"Max sensitivity (kappa): {max_kappa:.2e}")
     cmap_k = plt.cm.hot.copy()
     cmap_k.set_bad("0.25")
     vmax = np.nanpercentile(kappa, 99)

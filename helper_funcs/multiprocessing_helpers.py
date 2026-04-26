@@ -7,6 +7,8 @@ from typing import Any, Callable
 from numba import njit
 import numpy as np
 import numpy.typing as npt
+import psutil
+from typing import Tuple
 
 
 def timing(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -21,6 +23,31 @@ def timing(func: Callable[..., Any]) -> Callable[..., Any]:
         return result
 
     return wrapper
+
+
+def benchmark(
+    func: Callable[..., Any], *args: Any, n_runs: int = 3
+) -> Tuple[float, npt.NDArray[Any], float]:
+    """Run a function multiple times and print the average execution time.
+    Args:
+        func: The function to benchmark.
+        *args: The arguments to pass to the function.
+        n_runs: The number of times to run the function.
+    Returns:
+        float: The median execution time in seconds.
+        np.ndarray: The result of the function.
+        float: The variance of the execution times.
+    """
+    times = []
+    for _ in range(n_runs):
+        start_time = time.perf_counter()
+        result = func(*args)
+        end_time = time.perf_counter()
+        times.append(end_time - start_time)
+    median = np.median(times)
+    variance = np.var(times)
+    print(f"Median execution time over {n_runs} runs: {median:.6f} seconds")
+    return median, result, variance
 
 
 @timing
@@ -393,6 +420,20 @@ def plot_medians(median_vals: list[float], cores: list[int]) -> None:
     plt.xlabel("Number of Cores")
     plt.ylabel("Median Execution Time (seconds)")
     plt.show()
+
+
+def w4_monte_carlo(NUM_RUNS: int = 10_000) -> None:
+    """
+    Run Monte Carlo simulations for estimation of pi using Circle and Parallel
+    implementations.
+
+    Parameters:
+    NUM_RUNS (int): Number of Monte Carlo simulations to run. Default is 10_000.
+    """
+    benchmark(estimate_pi_circle, NUM_RUNS, n_runs=3)
+    for i in range(psutil.cpu_count(logical=False)):
+        print(f"Running on {i + 1} cores")
+        benchmark(estimate_pi_parallel, NUM_RUNS, i + 1, n_runs=3)
 
 
 if __name__ == "__main__":

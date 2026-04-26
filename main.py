@@ -6,7 +6,6 @@ from numba import jit, njit, prange
 
 # from line_profiler import profile
 from typing import Any, Callable, Tuple, List, Dict
-from multiprocessing import Pool
 import psutil
 import numpy.typing as npt
 from helper_funcs.multiprocessing_helpers import (
@@ -70,10 +69,10 @@ def benchmark(
 
 
 def w1_f(
-    points: np.ndarray[complex],
-    mandelbrot_set: np.ndarray[int],
+    points: npt.NDArray[np.complexfloating[Any, Any]],
+    mandelbrot_set: npt.NDArray[np.int32],
     max_iters: int = 100,
-) -> np.ndarray:
+) -> npt.NDArray[np.int32]:
     """Compute week-1 Mandelbrot escape counts for a flattened complex grid."""
     for i, c in enumerate(points):
         z = 0
@@ -88,8 +87,11 @@ def w1_f(
 
 
 def w2_f(
-    C: np.ndarray[complex], Z: np.ndarray, M: np.ndarray, max_iters: int
-) -> np.ndarray:
+    C: npt.NDArray[np.complexfloating[Any, Any]],
+    Z: npt.NDArray[np.complexfloating[Any, Any]],
+    M: npt.NDArray[np.int32],
+    max_iters: int,
+) -> npt.NDArray[np.int32]:
     """Compute week-2 vectorized Mandelbrot escape counts for a complex grid."""
     for _ in range(max_iters):
         mask = np.abs(Z) <= 2
@@ -104,7 +106,7 @@ def w1_main(
     x_set: tuple = (-2.0, 1.0),  # Changed to tuple + floats
     y_set: tuple = (-1.5, 1.5),  # Changed to tuple + floats
     win_size: int = 100,
-) -> np.ndarray:
+) -> npt.NDArray[np.int32]:
     """Generate and plot the Mandelbrot set.
     Args:
         max_iter (int): Maximum number of iterations.
@@ -112,7 +114,7 @@ def w1_main(
         y_set (tuple): Y-axis range.
         win_size (int): Number of points in each axis.
     Returns:
-        np.ndarray: Mandelbrot set values in a 2D array.
+        npt.NDArray[np.int32]: Mandelbrot set values in a 2D array.
     """
     width = np.linspace(x_set[0], x_set[1], win_size)
     height = np.linspace(y_set[0], y_set[1], win_size)
@@ -136,7 +138,7 @@ def w2_main(
     x_set: tuple = (-2.0, 1.0),  # Changed to tuple + floats
     y_set: tuple = (-1.5, 1.5),  # Changed to tuple + floats
     win_size: int = 100,
-) -> np.ndarray:
+) -> npt.NDArray[np.int32]:
     """Generate and plot the Mandelbrot set.
     Args:
         max_iter (int): Maximum number of iterations.
@@ -144,7 +146,7 @@ def w2_main(
         y_set (tuple): Y-axis range.
         win_size (int): Number of points in each axis.
     Returns:
-        np.ndarray: Mandelbrot set values in a 2D array.
+        npt.NDArray[np.int32]: Mandelbrot set values in a 2D array.
     """
 
     width = np.linspace(x_set[0], x_set[1], win_size, dtype=np.float32)
@@ -153,7 +155,7 @@ def w2_main(
     C = X + 1j * Y
 
     # Based on the 100x100 points, compute the mandelbrot set
-    mandelbrot_set = np.zeros(C.shape, dtype=C.dtype)
+    mandelbrot_set = np.zeros(C.shape, dtype=np.int32)
 
     # Initialize Z and M arrays
     Z = np.zeros_like(C, dtype=np.complex64)
@@ -190,7 +192,7 @@ def w_1_5_main(
     x_set: tuple = (-2.0, 1.0),  # Changed to tuple + floats
     y_set: tuple = (-1.5, 1.5),  # Changed to tuple + floats
     win_size: int = 100,
-) -> np.ndarray:
+) -> npt.NDArray[np.int32]:
     """Generate and plot the Mandelbrot set.
     Args:
         max_iter (int): Maximum number of iterations.
@@ -198,7 +200,7 @@ def w_1_5_main(
         y_set (tuple): Y-axis range.
         win_size (int): Number of points in each axis.
     Returns:
-        np.ndarray: Mandelbrot set values in a 2D array.
+        npt.NDArray[np.int32]: Mandelbrot set values in a 2D array.
     """
 
     width = np.linspace(x_set[0], x_set[1], win_size)
@@ -206,7 +208,7 @@ def w_1_5_main(
     points = [complex(x, y) for x in width for y in height]
 
     # Based on the 100x100 points, compute the mandelbrot set
-    mandelbrot_set = np.zeros(len(points))
+    mandelbrot_set = np.zeros(len(points), dtype=np.int32)
     # Get n and c
     for i, c in enumerate(points):
         mandelbrot_set[i] = f_jit(c, max_iters)
@@ -228,12 +230,12 @@ def w2_memory_access(N: int = 1000) -> None:
     @timing
     def row_major_sum(A):
         for i in range(N):
-            s = np.sum(A[i, :])
+            _ = np.sum(A[i, :])
 
     @timing
     def column_major_sum(A):
         for j in range(N):
-            s = np.sum(A[:, j])
+            _ = np.sum(A[:, j])
 
     print("Using C order:")
     row_major_sum(A)
@@ -270,17 +272,19 @@ def w2_scaling() -> tuple[list[int], list[float]]:
 @timing
 @njit
 def w3_f(
-    C: np.ndarray[complex], mandelbrot_set: np.ndarray, max_iters: int
-) -> np.ndarray:
-    """_summary_
+    C: npt.NDArray[np.complexfloating[Any, Any]],
+    mandelbrot_set: npt.NDArray[np.int32],
+    max_iters: int,
+) -> npt.NDArray[np.int32]:
+    """Compute Mandelbrot escape counts for a grid of complex numbers.
 
     Args:
-        C (np.ndarray[complex]): _description_
-        mandelbrot_set (np.ndarray): _description_
-        max_iters (int): _description_
+        C (npt.NDArray[np.complexfloating[Any, Any]]): Grid of complex numbers.
+        mandelbrot_set (npt.NDArray[np.int32]): Output array for escape counts.
+        max_iters (int): Maximum number of iterations.
 
     Returns:
-        np.ndarray: _description_
+        npt.NDArray[np.int32]: Filled Mandelbrot escape-count array.
     """
     for i, col in enumerate(C):
         for j, c in enumerate(col):
@@ -299,19 +303,22 @@ def w3_f(
 @timing
 @njit(parallel=True)
 def w3_parallel(
-    C: np.ndarray[complex], mandelbrot_set: np.ndarray, winsize: int, max_iters: int
-) -> np.ndarray:
+    C: npt.NDArray[np.complexfloating[Any, Any]],
+    mandelbrot_set: npt.NDArray[np.int32],
+    winsize: int,
+    max_iters: int,
+) -> npt.NDArray[np.int32]:
     """
     Compute Mandelbrot escape counts using Numba parallel loops.
 
     Args:
-        C (np.ndarray[complex]): Complex grid values.
-        mandelbrot_set (np.ndarray): Output array for escape counts.
+        C (npt.NDArray[np.complexfloating[Any, Any]]): Complex grid values.
+        mandelbrot_set (npt.NDArray[np.int32]): Output array for escape counts.
         winsize (int): Grid size along each axis.
         max_iters (int): Maximum number of iterations.
 
     Returns:
-        np.ndarray: Filled Mandelbrot escape-count array.
+        npt.NDArray[np.int32]: Filled Mandelbrot escape-count array.
     """
     for i in prange(winsize):
         for j in prange(winsize):
@@ -440,7 +447,7 @@ def w4_testing(
     y_set: Tuple[float, float] = (-1.5, 1.5),  # Changed to tuple + floats
     win_size: int = 100,
     dtype: npt.DTypeLike = np.float64,
-) -> np.ndarray:
+) -> Tuple[npt.NDArray[np.int32], float, float, float]:
     """Generate and plot the Mandelbrot set.
     Args:
         max_iter (int): Maximum number of iterations.
@@ -449,7 +456,7 @@ def w4_testing(
         win_size (int): Number of points in each axis.
         dtype (np.dtype): Data type for the Mandelbrot set.
     Returns:
-        np.ndarray: Mandelbrot set values in a 2D array.
+        Tuple[npt.NDArray[np.int32], float, float, float]: Mandelbrot set values in a 2D array, median serial time, variance, and median parallel time.
     """
     print("Benchmarking serial approach")
     median_serial, _, var_serial = benchmark(
@@ -493,7 +500,7 @@ def w4_main(
     dtype: npt.DTypeLike = np.float64,
     NoCores: int = psutil.cpu_count(),
     n_runs: int = 3,
-) -> np.ndarray:
+) -> Tuple[float, npt.NDArray[np.int32], float]:
     """Generate and plot the Mandelbrot set.
     Args:
         max_iter (int): Maximum number of iterations.
@@ -504,7 +511,7 @@ def w4_main(
         NoCores (int): Number of cores to use.
         n_runs (int): Number of times to run the computation.
     Returns:
-        np.ndarray: Mandelbrot set values in a 2D array.
+        Tuple[float, npt.NDArray[Any], float]: Median time, Mandelbrot set values, and variance.
     """
 
     mandelbrot_set, timings = mandelbrot_parallel(
@@ -595,7 +602,7 @@ def w5_main(
     NoProcesses: int = psutil.cpu_count(),
     n_runs: int = 3,
     chunk: int = 8,
-) -> np.ndarray:
+) -> Tuple[float, npt.NDArray[Any], float, float]:
     """Generate and plot the Mandelbrot set.
     Args:
         max_iter (int): Maximum number of iterations.
@@ -605,7 +612,7 @@ def w5_main(
         dtype (npt.DTypeLike): Data type for the Mandelbrot set.
 
     Returns:
-        np.ndarray: Mandelbrot set values in a 2D array.
+        Tuple[float, npt.NDArray[Any], float, float]: Median time, Mandelbrot set values, variance, and LIF.
     """
     tiny = [(0, 8, 8, x_set[0], x_set[1], y_set[0], y_set[1], max_iters)]
     pool = get_pool(8, tiny)
@@ -669,7 +676,7 @@ def w6_testing(
     NoProcesses: int = 8,
     n_runs: int = 3,
     testing_chunks: List[int] = [64, 128, 256, 512],
-) -> np.ndarray:
+) -> Tuple[Dict[int, float], float]:
     """Generate and plot the Mandelbrot set.
     Args:
         max_iter (int): Maximum number of iterations.
@@ -678,7 +685,7 @@ def w6_testing(
         win_size (int): Number of points in each axis.
         dtype (np.dtype): Data type for the Mandelbrot set.
     Returns:
-        np.ndarray: Mandelbrot set values in a 2D array.
+        Tuple[Dict[int, float], float]: Median times for each chunk size and serial execution time.
     """
 
     # Warmup
@@ -751,7 +758,7 @@ def w6_main(
     NoProcesses: int = 8,
     n_runs: int = 3,
     chunks: int = 64,
-) -> np.ndarray:
+) -> Tuple[float, npt.NDArray[Any], float, float]:
     """Generate and plot the Mandelbrot set.
     Args:
         max_iter (int): Maximum number of iterations.
@@ -760,7 +767,7 @@ def w6_main(
         win_size (int): Number of points in each axis.
         dtype (np.dtype): Data type for the Mandelbrot set.
     Returns:
-        np.ndarray: Mandelbrot set values in a 2D array.
+        Tuple[float, npt.NDArray[Any], float, float]: Median time, Mandelbrot set values, variance, and LIF.
     """
 
     client, cluster = load_dask_client_local(NoProcesses, 1)
@@ -798,7 +805,7 @@ def w7_testing(
     n_runs: int = 3,
     testing_chunks: List[int] = [64, 128, 256, 512],
     ip: str = "10.92.0.0",
-) -> np.ndarray:
+) -> Dict[int, float]:
     """Generate and plot the Mandelbrot set.
     Args:
         max_iter (int): Maximum number of iterations.
@@ -807,7 +814,7 @@ def w7_testing(
         win_size (int): Number of points in each axis.
         dtype (np.dtype): Data type for the Mandelbrot set.
     Returns:
-        np.ndarray: Mandelbrot set values in a 2D array.
+        Dict[int, float]: Median times for each chunk size.
     """
 
     # Warmup
@@ -851,7 +858,7 @@ def w7_main(
     n_runs: int = 3,
     chunks: int = 64,
     ip: str = "10.92.0.0",
-) -> np.ndarray:
+) -> Tuple[float, npt.NDArray[Any], float]:
     """Generate and plot the Mandelbrot set.
     Args:
         max_iter (int): Maximum number of iterations.
@@ -864,7 +871,7 @@ def w7_main(
         chunks (int): Number of chunks to split the computation into.
         ip (str): IP address of the Dask scheduler.
     Returns:
-        np.ndarray: Mandelbrot set values in a 2D array.
+        Tuple[float, npt.NDArray[Any], float]: Median time, Mandelbrot set values, and variance.
     """
 
     client = load_dask_client(ip)
@@ -916,7 +923,9 @@ def benchmark_all(n_runs: int = 3, size: int = 1024) -> dict[str, float]:
         w_1_5_main, 100, (-2.0, 1.0), (-1.5, 1.5), size, n_runs=n_runs
     )
     print("Week 3: optimized numba")
-    median_w3_f64, _, median_w3_f32, _, var_w3_f64, var_w3_f32 = benchmark_dtype(n_runs=n_runs)
+    median_w3_f64, _, median_w3_f32, _, var_w3_f64, var_w3_f32 = benchmark_dtype(
+        n_runs=n_runs
+    )
 
     print("Week 4: parallel computing")
     # W4 main now uses its own timings and we do not want to time the workers in the benchmark
@@ -982,7 +991,7 @@ def w10_main(
     win_size: int = 1024,
     n_runs: int = 3,
     use_f64: bool = False,
-) -> np.ndarray:
+) -> Tuple[float, npt.NDArray[Any], float]:
     medians = []
     for _ in range(n_runs):
         if use_f64:
@@ -1058,8 +1067,8 @@ def benchmark_dtype(
     n_runs: int,
     win_size: int = 1024,
     n_iters: int = 100,
-    x_set: Tuple[float, float] = (-2.0, 1.0), 
-    y_set: Tuple[float, float] = (-1.5, 1.5), 
+    x_set: Tuple[float, float] = (-2.0, 1.0),
+    y_set: Tuple[float, float] = (-1.5, 1.5),
 ) -> tuple[float, npt.NDArray[Any], float, npt.NDArray[Any], float, float]:
     """
     Compare ``w3_main`` performance for float64 versus float32 inputs.
@@ -1085,6 +1094,7 @@ def benchmark_dtype(
         v64,
         v32,
     )
+
 
 def benchmark_numba_imp(
     n_runs: int = 3,

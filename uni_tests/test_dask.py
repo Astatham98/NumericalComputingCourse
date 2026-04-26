@@ -2,9 +2,15 @@ import numpy as np
 import pytest
 from numpy.testing import assert_array_equal
 
-from helper_funcs.distributed_helpers import load_dask_client_local, mandelbrot_dask_worker
+from helper_funcs.distributed_helpers import (
+    load_dask_client_local,
+    mandelbrot_dask_worker,
+)
 from main import w6_main
-from helper_funcs.multiprocessing_helpers import compute_mandelbrot_chunk, mandelbrot_serial
+from helper_funcs.multiprocessing_helpers import (
+    compute_mandelbrot_chunk,
+    mandelbrot_serial,
+)
 from uni_tests.conftest import DEFAULT_X_SET, DEFAULT_Y_SET
 
 
