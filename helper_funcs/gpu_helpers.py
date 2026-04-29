@@ -57,8 +57,21 @@ def gpu_mandelbrot(
     y_set: tuple = (-1.5, 1.5),
     win_size: int = 1024,
     gpu_devices: list[cl.Device] | None = None,
-) -> np.ndarray:
+) -> tuple[np.ndarray, float]:
+    """
+    Compute the Mandelbrot set using PyOpenCL.
+    Parameters:
+    max_iters (int): Maximum number of iterations for the Mandelbrot calculation.
+    x_set (tuple): Range of the real part of the complex plane (x_min, x_max).
+    y_set (tuple): Range of the imaginary part of the complex plane (y_min, y_max).
+    win_size (int): Size of the output image (win_size x win_size).
+    gpu_devices (list[cl.Device] | None): List of GPU devices to use. If None, the default device will be used.
+    Returns:
+    np.ndarray: A 2D array representing the Mandelbrot set, where each element contains the number of iterations before divergence.
+    float: The time taken to compute the Mandelbrot set in seconds.
+    """
 
+    
     KERNEL_SRC = """
     __kernel void mandelbrot(
     __global int *result,
@@ -138,7 +151,19 @@ def gpu_mandelbrot_f64(
     y_set: tuple = (-1.5, 1.5),
     win_size: int = 1024,
     gpu_devices: list[cl.Device] | None = None,
-) -> np.ndarray:
+) -> tuple[np.ndarray, float]:
+    """
+    Compute the Mandelbrot set using PyOpenCL with f64 precision.
+    Parameters:
+    max_iters (int): Maximum number of iterations for the Mandelbrot calculation.
+    x_set (tuple): Range of the real part of the complex plane (x_min, x_max).
+    y_set (tuple): Range of the imaginary part of the complex plane (y_min, y_max).
+    win_size (int): Size of the output image (win_size x win_size).
+    gpu_devices (list[cl.Device] | None): List of GPU devices to use. If None, the default device will be used.
+    Returns:
+    np.ndarray: A 2D array representing the Mandelbrot set, where each element contains the number of iterations before divergence.
+    float: The time taken to compute the Mandelbrot set in seconds.
+    """
 
     KERNEL_SRC = get_f64_mandelbrot_kernel()
 
